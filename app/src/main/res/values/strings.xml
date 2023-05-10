@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">PMS</string>
+    <string name="login">로그인</string>
+    <string name="logout">로그아웃</string>
+    <string name="id">ID</string>
+    <string name="password">Password</string>
+    <string name="app_exit_message">\'뒤로\' 버튼을 한번 더 입력하면,\n서비스가 종료 됩니다.</string>
+    <string name="company_address_fullwidth">서울특별시 영등포구 경인로 775 문래동, 에이스 하이테크시티 2동 1804호</string>
+    <string name="company_address_normalwidth">서울특별시 영등포구 경인로 775 문래동,\n 에이스 하이테크시티 2동 1804호</string>
+    <string name="company_contact">CONTACT:070-4680-0293</string>
+    <string name="company_email">pms@urimts.co.kr</string>
+    <string name="company_url">UrimTS 홈으로 이동</string>
+
+</resources>
