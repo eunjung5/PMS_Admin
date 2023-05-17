@@ -1,17 +1,13 @@
 package com.pms.admin.navigation.nav_graph
 
-import android.util.Log
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
-import com.pms.admin.MainActivity.Companion.TAG
-import com.pms.admin.model.Mode
 import com.pms.admin.navigation.MANAGER_GRAPH_ROUTE
 import com.pms.admin.navigation.Screen
-import com.pms.admin.ui.MainViewModel
 import com.pms.admin.ui.views.managerManagement.ManagerAddEdit
 import com.pms.admin.ui.views.managerManagement.ManagerJobSearch
 import com.pms.admin.ui.views.managerManagement.ManagerManagement
@@ -19,7 +15,6 @@ import com.pms.admin.ui.views.managerManagement.ManagerPasswordEdit
 
 fun NavGraphBuilder.managerNavGraph(
     navController: NavHostController,
-    viewModel: MainViewModel,
 ) {
     navigation(
         startDestination = Screen.ManagerManagement.route,
@@ -29,14 +24,14 @@ fun NavGraphBuilder.managerNavGraph(
         composable(
             route = Screen.ManagerManagement.route
         ){
-            ManagerManagement(navController,viewModel)
+            ManagerManagement(navController)
         }
 
         //관리자 생성
         composable(
             route = Screen.ManagerAdd.route
         ){
-            ManagerAddEdit(navController, viewModel,"")
+            ManagerAddEdit(navController,"")
         }
 
         //관리자 수정
@@ -50,7 +45,7 @@ fun NavGraphBuilder.managerNavGraph(
         ){  entry ->
             val userId = entry.arguments?.getString("userId") ?: ""
 
-            ManagerAddEdit(navController, viewModel, userId)
+            ManagerAddEdit(navController, userId)
         }
 
         //관리자 PW 변경
@@ -64,7 +59,7 @@ fun NavGraphBuilder.managerNavGraph(
         ){  entry ->
             val userId = entry.arguments?.getString("userId") ?: ""
 
-            ManagerPasswordEdit(navController, viewModel, userId)
+            ManagerPasswordEdit(navController, userId)
         }
 
         //관리자 작업 조회
@@ -78,7 +73,7 @@ fun NavGraphBuilder.managerNavGraph(
         ){  entry ->
             val userId = entry.arguments?.getString("userId") ?: ""
 
-           ManagerJobSearch(navController, viewModel, userId)
+           ManagerJobSearch(navController, userId)
         }
     }
 }

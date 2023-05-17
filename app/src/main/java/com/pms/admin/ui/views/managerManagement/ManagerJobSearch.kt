@@ -2,13 +2,15 @@ package com.pms.admin.ui.views.managerManagement
 
 import android.app.DatePickerDialog
 import android.os.Build
-import android.util.Log
+import androidx.activity.ComponentActivity
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -21,53 +23,57 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.pms.admin.MainActivity.Companion.TAG
+import com.pms.admin.PMSAdminApplication
 import com.pms.admin.R
 import com.pms.admin.WindowType
+import com.pms.admin.domain.util.PMSAndroidViewModelFactory
 import com.pms.admin.model.JobListResult
-import com.pms.admin.model.ManagerListResult
 import com.pms.admin.rememberWindowSize
-import com.pms.admin.ui.MainViewModel
+import com.pms.admin.ui.viewModels.MainViewModel
 import com.pms.admin.ui.component.menu.Header
 import com.pms.admin.ui.component.menu.SidebarMenu
 import com.pms.admin.ui.component.table.TableCell
 import com.pms.admin.ui.theme.CalendarBackground
 import com.pms.admin.ui.theme.ContentsBackground
 import com.pms.admin.ui.theme.MenuBackground
+import com.pms.admin.ui.viewModels.ManagerViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
 fun ManagerJobSearch(
     navController: NavHostController,
-    viewModel: MainViewModel,
     userId: String,
+    viewModel: MainViewModel = viewModel(LocalContext.current as ComponentActivity),
+    managerViewModel: ManagerViewModel = viewModel(factory = PMSAndroidViewModelFactory( PMSAdminApplication.getInstance())),
 ) {
-    var jobList = viewModel.jobList
+    var jobList = managerViewModel.jobList
     val window = rememberWindowSize()
     // 출력 포맷 지정
     var dataFormat = SimpleDateFormat("yyyy/M/d")
 
-    var calendar by rememberSaveable{mutableStateOf(Calendar.getInstance())}
-    var before7Calendar by rememberSaveable{
+    var calendar by remember{mutableStateOf(Calendar.getInstance())}
+    var before7Calendar by remember{
         val calendar = Calendar.getInstance()
         calendar.add(Calendar.DATE, -7)
         mutableStateOf(calendar)
     }
 
-    var currentDate by rememberSaveable { mutableStateOf(dataFormat.format(calendar.time)) }
-    var before7Date by rememberSaveable {
+    var currentDate by remember { mutableStateOf(dataFormat.format(calendar.time)) }
+    var before7Date by remember {
         mutableStateOf(dataFormat.format(before7Calendar.time))
     }
 
-    var searchContent by rememberSaveable { mutableStateOf("") }
+    var searchContent by remember { mutableStateOf("") }
 
     val context = LocalContext.current
     val datePickerDialog = DatePickerDialog(
@@ -92,8 +98,8 @@ fun ManagerJobSearch(
         before7Calendar.get(Calendar.DAY_OF_MONTH)
     )
 
-    LaunchedEffect(key1 = true) {
-        viewModel.getJobList(
+    LaunchedEffect(true) {
+        managerViewModel.getJobList(
             user_id = userId,
             start_date = before7Date,
             end_date = currentDate,
@@ -105,7 +111,7 @@ fun ManagerJobSearch(
         SidebarMenu(navController, 0)
 
         Column(modifier = Modifier.fillMaxSize()) {
-            Header(navController, viewModel, "관리자 작업조회", R.drawable.person_search)
+            Header(navController, viewModel, stringResource(id = R.string.manager_job_search), R.drawable.person_search)
 
             //search mode button
             Column(
@@ -139,12 +145,13 @@ fun ManagerJobSearch(
                                     verticalArrangement = Arrangement.Center,
                                 ) {
                                     Text(
-                                        text = "시작 날짜",
+                                        text = stringResource(id = R.string.start_day),
                                         color = Color.White,
                                         modifier = Modifier
                                             .padding(start = 5.dp)
                                     )
                                     Spacer(Modifier.height(10.dp))
+
                                     TextField(
                                         modifier = Modifier
                                             .padding(start = 5.dp, end = 5.dp)
@@ -190,7 +197,7 @@ fun ManagerJobSearch(
                                     verticalArrangement = Arrangement.Center,
                                 ) {
                                     Text(
-                                        text = "종료 날짜",
+                                        text = stringResource(id = R.string.end_day),
                                         color = Color.White,
                                         modifier = Modifier
                                             .padding(start = 5.dp)
@@ -230,7 +237,7 @@ fun ManagerJobSearch(
                                 }
                             }
 
-                            //조회 
+                            //조회
                             Row(
                                 modifier = Modifier.weight(1f),
                                 horizontalArrangement = Arrangement.Start
@@ -241,7 +248,7 @@ fun ManagerJobSearch(
                                 ) {
                                     Button(
                                         onClick = {
-                                            viewModel.getJobList(
+                                            managerViewModel.getJobList(
                                                 user_id = userId,
                                                 start_date = before7Date,
                                                 end_date = currentDate,
@@ -253,7 +260,7 @@ fun ManagerJobSearch(
 
                                         ) {
                                         Text(
-                                            text = "조회",
+                                            text = stringResource(R.string.search),
                                             color = Color.White
                                         )
                                     }
@@ -269,7 +276,7 @@ fun ManagerJobSearch(
                                     verticalArrangement = Arrangement.Center,
                                 ) {
                                     Text(
-                                        text = "작업 내용 조회",
+                                        text = stringResource(R.string.job_content_inquiry),
                                         color = Color.White,
                                         modifier = Modifier
                                             .padding(start = 5.dp)
@@ -330,14 +337,16 @@ fun ManagerJobSearch(
 fun ColumnScope.ManagerJobList(
     dataList: List<JobListResult>,
 ) {
-
-    val headers = listOf("관리자", "작업시간", "작업내용", "상세설명")
-    val weights = listOf(1F, 2F, 3F,  1.5F)
+    val context = LocalContext.current
+    val headers = listOf(stringResource(R.string.manager), stringResource(R.string.job_time), stringResource(R.string.job_content), stringResource(R.string.job_description))
+    val weights = listOf(1F, 2F, 3F,  3F)
+    val scrollState = rememberScrollState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .weight(3f)
+            .horizontalScroll(scrollState)
     ) {
         LazyColumn(
             Modifier
@@ -346,24 +355,22 @@ fun ColumnScope.ManagerJobList(
         ) {
             item {
                 Row(Modifier.background(MenuBackground)) {
-                    for (i in 0 until headers.size) {
+                    for (i in headers.indices) {
                         TableCell(text = headers[i], weight = weights[i])
                     }
-
                 }
             }
 
             if (dataList.isEmpty()) {
                 item {
                     Row(Modifier.fillMaxWidth()) {
-                        TableCell(text = "내용 없음", weight = 1F)
+                        TableCell(text = context.resources.getString(R.string.no_content), weight = 9F)
                     }
                 }
             }
 
             items(dataList) {
                 val (user_id,work_date,work_type,dscr,result) = it
-
 
                 Row(
                     Modifier.fillMaxWidth(),
@@ -377,6 +384,7 @@ fun ColumnScope.ManagerJobList(
             }
         }
     }
+
 }
 
 @RequiresApi(Build.VERSION_CODES.O)

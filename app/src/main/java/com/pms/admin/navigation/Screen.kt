@@ -19,4 +19,8 @@ sealed class Screen(val route : String) {
     object ManagerEdit : Screen(route = "manager_edit/{userId}")               //관리자 수정
     object ManagerPasswordEdit : Screen(route = "manager_password_edit/{userId}")               //관리자 PW 변경
     object ManagerJobSearch : Screen(route = "manager_job_search/{userId}")               //관리자 작업 조회
+    object SiteManagement : Screen(route = "site_management") //site 관리 리스트
+    object SiteAdd : Screen(route = "site_add") //site 생성
+    object SiteEdit : Screen(route = "site_edit/{siteId}") //site 수정
+    object SiteMPUAdd : Screen(route = "site_mpu_add/{siteId}/{siteName}") //site - mpu 추가
 }

@@ -1,10 +1,7 @@
 package com.pms.admin.ui.component.table
 
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -21,11 +18,13 @@ fun RowScope.TableCell(
     text: String,
     weight: Float,
 ) {
+    val width = weight * 100
+
     Text(
         text = text,
         modifier = Modifier
             .border(1.dp, ContentLine)
-            .weight(weight)
+            .width(width.dp)
             .height(50.dp)
             .padding(10.dp),
         color = Color.White,

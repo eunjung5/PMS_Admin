@@ -61,19 +61,18 @@ class RemoteRepositoryImpl(application: Application) : RemoteRepository {
     private val api = RetrofitInstance.getInstance().create(RequestApi::class.java)
 
     override suspend fun loginUser(
-        op: String,
         userid: String,
         sha1: String
     ): Response<UserLoginResult> {
-        return authApi.loginUser(op, userid, sha1)
+        return authApi.loginUser(op="login", userid, sha1)
     }
 
-    override suspend fun logoutUser(op: String): Response<ResponseResult> {
-        return authApi.logoutUser(op)
+    override suspend fun logoutUser(): Response<ResponseResult> {
+        return authApi.logoutUser(op="logout")
     }
 
-    override suspend fun getManagerList( work: String): Response<List<ManagerListResult>> {
-        return api.getManagerList(work)
+    override suspend fun getManagerList(): Response<List<ManagerListResult>> {
+        return api.getManagerList(work = "get_list")
     }
 
     override suspend fun registerUser(
@@ -101,30 +100,26 @@ class RemoteRepositoryImpl(application: Application) : RemoteRepository {
     }
 
     override suspend fun updateUser(
-        work: String,
         user_id: String,
         role: String,
         name: String,
         tel: String
     ): Response<ResponseResult>{
-        return api.updateUser(work, user_id, role, name, tel)
+        return api.updateUser(work="set_modify", user_id, role, name, tel)
     }
 
-
-    override suspend fun getUserInfo(work: String, user_id: String): Response<UserInfoResult> {
+    override suspend fun getUserInfo( user_id: String): Response<UserInfoResult> {
         return api.getUserInfo(work = "get_modify", user_id = user_id)
     }
 
     override suspend fun updateUserPassword(
-        work: String,
         user_id: String,
         sha1: String
     ): Response<ResponseResult> {
-        return api.updateUserPassword(work = "set_reset", user_id = user_id, sha1 = sha1)
+        return api.updateUserPassword(work="set_reset",  user_id = user_id, sha1 = sha1)
     }
 
     override suspend fun getJobList(
-        work: String,
         user_id: String,
         start_date: String,
         end_date: String,
@@ -141,7 +136,32 @@ class RemoteRepositoryImpl(application: Application) : RemoteRepository {
         )
     }
 
-    override  suspend fun deleteUser( work: String, user_id: String): Response<ResponseResult>{
-        return api.deleteUser(work="set_del",user_id)
+    override suspend fun deleteUser( user_id: String): Response<ResponseResult>{
+        return api.deleteUser("set_del",user_id)
     }
+
+    override suspend fun getSiteList(): Response<List<SiteListResult>>{
+        return api.getSiteList("get_list")
+    }
+
+    override suspend fun getSitesId(): Response<SiteIDResult>{
+        return api.getSitesId("get_sites_id")
+    }
+    override suspend fun checkDuplicatedSiteName(siteName:String): Response<ResponseResult>{
+        return api.checkDuplicatedSiteName("get_sites_check",siteName)
+    }
+
+    override suspend fun registerSite(work:String, site_id:String, site_name:String, site_addr:String, descr:String): Response<ResponseResult>{
+        return api.registerSite(work,site_id, site_name, site_addr, descr)
+    }
+
+    override suspend fun getSiteInfo(site_id: String): Response<SiteInfoResult> {
+        return api.getSiteInfo("get_modify", site_id)
+    }
+
+    override suspend fun getMPUList(mode:Mode,site_id:String):Response<List<SiteMPUListResult>>{
+        val work = if(mode == Mode.Add) "get_mpu_add" else "get_mpu_delete"
+        return api.getMPUList(work,site_id)
+    }
+
 }

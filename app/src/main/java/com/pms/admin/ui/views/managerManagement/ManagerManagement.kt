@@ -3,9 +3,8 @@ package com.pms.admin.ui.views.managerManagement
 import android.annotation.SuppressLint
 import android.content.SharedPreferences
 import android.util.Log
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.activity.ComponentActivity
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -33,17 +33,18 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.pms.admin.MainActivity.Companion.TAG
+import com.pms.admin.*
 import com.pms.admin.R
-import com.pms.admin.WindowType
+import com.pms.admin.domain.util.PMSAndroidViewModelFactory
 import com.pms.admin.model.ManagerListResult
-import com.pms.admin.rememberWindowSize
-import com.pms.admin.ui.MainViewModel
+import com.pms.admin.ui.viewModels.MainViewModel
 import com.pms.admin.ui.component.menu.Header
 import com.pms.admin.ui.component.menu.SidebarMenu
 import com.pms.admin.ui.component.table.TableCell
 import com.pms.admin.ui.theme.*
+import com.pms.admin.ui.viewModels.ManagerViewModel
 import com.pms.admin.util.computeSHAHash
 import kotlinx.coroutines.launch
 
@@ -52,16 +53,20 @@ import kotlinx.coroutines.launch
 @Composable
 fun ManagerManagement(
     navController: NavHostController,
-    viewModel: MainViewModel
+    viewModel: MainViewModel = viewModel(LocalContext.current as ComponentActivity),
+    managerViewModel: ManagerViewModel = viewModel(
+        factory = PMSAndroidViewModelFactory(
+            PMSAdminApplication.getInstance()
+        )
+    )
 ) {
-    var managerList = viewModel.managerList
+    var managerList = managerViewModel.managerList
     val window = rememberWindowSize()
-    val update = viewModel.updateList.value
+    val update = managerViewModel.updateList.value
 
-    LaunchedEffect(true,update) {
-        viewModel.getManagerList()
+    LaunchedEffect(true, update) {
+        managerViewModel.getManagerList()
     }
-
 
     Row(
         modifier = Modifier
@@ -70,7 +75,12 @@ fun ManagerManagement(
         SidebarMenu(navController, 0)
 
         Column(modifier = Modifier.fillMaxSize()) {
-            Header(navController, viewModel, "관리자 관리", R.drawable.menu_manager)
+            Header(
+                navController,
+                viewModel,
+                stringResource(id = R.string.manager_management),
+                R.drawable.menu_manager
+            )
 
             //manager create button
             Column(
@@ -91,7 +101,7 @@ fun ManagerManagement(
                         shape = RoundedCornerShape(50.dp)
                     ) {
                         Text(
-                            text = " 관리자 생성",
+                            text = stringResource(id = R.string.manager_create),
                             color = Color.White
                         )
                         Spacer(modifier = Modifier.width(10.dp))
@@ -110,10 +120,9 @@ fun ManagerManagement(
                     .weight(if (window.height == WindowType.Medium) 5f else 3f)
             ) {
                 ManagerManagementList(
-                    viewModel,
                     dataList = managerList.value,
                 ) {
-                    EditMode(viewModel, it.weight, it.userId) { url ->
+                    EditMode(managerViewModel, it.weight, it.userId) { url ->
                         navController.navigate(url)
                     }
                 }
@@ -126,29 +135,32 @@ fun ManagerManagement(
 
 data class EditModeData(val weight: Float, val userId: String)
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ColumnScope.ManagerManagementList(
-    viewModel: MainViewModel,
     dataList: List<ManagerListResult>,
     content: @Composable RowScope.(data: EditModeData) -> Unit
 ) {
 
     val headers = listOf("ID", "이름", "레벨", "전화번호", "사이트", "작업")
-    val weights = listOf(1F, 0.8F, 1.2F, 1.5F, 1.5F, 1.5F)
+    val weights = listOf(1.5F, 1F, 1.5F, 1.5F, 2F, 2F)
+    val scrollState = rememberScrollState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .weight(3f)
+            .horizontalScroll(scrollState)
     ) {
         LazyColumn(
             Modifier
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            item {
+
+            stickyHeader {
                 Row(Modifier.background(MenuBackground)) {
-                    for (i in 0 until headers.size) {
+                    for (i in headers.indices) {
                         TableCell(text = headers[i], weight = weights[i])
                     }
 
@@ -158,7 +170,7 @@ fun ColumnScope.ManagerManagementList(
             if (dataList.isEmpty()) {
                 item {
                     Row(Modifier.fillMaxWidth()) {
-                        TableCell(text = "내용 없음", weight = 1F)
+                        TableCell(text = stringResource(id = R.string.no_content), weight = 9.5F)
                     }
                 }
             }
@@ -186,16 +198,19 @@ fun ColumnScope.ManagerManagementList(
 //작업 아이콘들
 @Composable
 fun RowScope.EditMode(
-    viewModel: MainViewModel,
+    viewModel: ManagerViewModel,
     weight: Float,
     userId: String,
     onNavigator: (String) -> Unit
 ) {
     var deleteDialog by remember { mutableStateOf(false) }
+    val window = rememberWindowSize()
+    val width = weight * 100
 
     return Row(
         modifier = Modifier
-            .weight(weight)
+            // .weight(weight)
+            .width(width.dp)
             .height(50.dp)
             .fillMaxWidth()
             .border(1.dp, Color(0xFF5A5F62))
@@ -254,7 +269,7 @@ fun RowScope.EditMode(
             CustomAlertDialog(onDismissRequest = { deleteDialog = false }) {
                 Column(
                     modifier = Modifier
-                        .width(600.dp)
+                        .width(if (window.height == WindowType.Medium) 600.dp else 800.dp)
                         .height(550.dp)
                         .background(Color.LightGray)
                 ) {
@@ -277,7 +292,7 @@ fun RowScope.EditMode(
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
 fun DeleteUser(
-    viewModel: MainViewModel,
+    viewModel: ManagerViewModel,
     userId: String,
     onDismissRequest: () -> Unit
 ) {
@@ -289,8 +304,11 @@ fun DeleteUser(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current   //키보드 감추기
-    val pref: SharedPreferences = context.getSharedPreferences("com.pms.admin.session_manager.SESSION_PREFERENCES", 0);
-    val adminID = pref.getString("com.pms.admin.session_manager.SESSION_USER_ID","") ?: " "
+    val pref: SharedPreferences =
+        context.getSharedPreferences("com.pms.admin.session_manager.SESSION_PREFERENCES", 0);
+    val adminID = pref.getString("com.pms.admin.session_manager.SESSION_USER_ID", "") ?: " "
+
+    val scrollState = rememberScrollState()  // mobile vertical scroll
 
     LaunchedEffect(userId) {
         viewModel.getUserInfo(userId)
@@ -303,7 +321,7 @@ fun DeleteUser(
     LaunchedEffect(true) {
         viewModel.checkAdminPasswordResult.collect { result ->
             if (!result) {
-                scaffoldState.snackbarHostState.showSnackbar("Admin 비밀번호가 맞지 않습니다.")
+                scaffoldState.snackbarHostState.showSnackbar(context.resources.getString(R.string.not_match_admin_password))
             } else {
                 viewModel.deleteUser(userId)
             }
@@ -312,11 +330,14 @@ fun DeleteUser(
 
     LaunchedEffect(true) {
         viewModel.result.collect { result ->
-            val content = if (result) "성공" else "실패"
-            scaffoldState.snackbarHostState.showSnackbar("사용자 삭제 ${content}입니다.")
+            val message = if (result) String.format(
+                context.resources.getString(R.string.delete_user_message),
+                "성공"
+            ) else String.format(context.resources.getString(R.string.delete_user_message), "실패")
+            scaffoldState.snackbarHostState.showSnackbar(message)
             onDismissRequest()
 
-            if(result) viewModel.setListUpdate(true)
+            if (result) viewModel.setListUpdate(true)
         }
     }
 
@@ -330,7 +351,8 @@ fun DeleteUser(
             modifier = Modifier
                 .fillMaxSize()
                 .background(ContentsBackground)
-                .padding(30.dp),
+                .padding(30.dp)
+                .verticalScroll(scrollState),
         ) {
 
             Row(
@@ -341,7 +363,7 @@ fun DeleteUser(
                 horizontalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "관리자 알림",
+                    text = stringResource(id = R.string.manager_notify),
                     color = Color.White,
                     fontSize = MaterialTheme.typography.h6.fontSize,
                     fontWeight = FontWeight.ExtraBold
@@ -381,7 +403,7 @@ fun DeleteUser(
                 })
                 Spacer(Modifier.height(5.dp))
                 Text(
-                    text = "관리자를 삭제하면 해당 관리자에 대한 정보가 영구적으로 사라집니다.",
+                    text = stringResource(id = R.string.warning_user_delete_message),
                     color = Color.White,
                     fontSize = MaterialTheme.typography.body1.fontSize,
                 )
@@ -393,7 +415,7 @@ fun DeleteUser(
                         .padding(top = 20.dp),
                 ) {
                     Text(
-                        text = "ID",
+                        text = stringResource(id = R.string.id),
                         color = Color.White,
                         fontSize = MaterialTheme.typography.body1.fontSize,
                         modifier = Modifier.padding(5.dp)
@@ -419,7 +441,7 @@ fun DeleteUser(
                         .padding(top = 20.dp),
                 ) {
                     Text(
-                        text = "이름",
+                        text = stringResource(id = R.string.name),
                         color = Color.White,
                         fontSize = MaterialTheme.typography.body1.fontSize,
                         modifier = Modifier.padding(5.dp)
@@ -450,7 +472,7 @@ fun DeleteUser(
                         modifier = Modifier.padding(5.dp)
                     )
                     Text(
-                        text = "Admin의 비밀번호를 입력해주세요.",
+                        text = stringResource(id = R.string.want_to_input_admin_password),
                         color = Color.White,
                         fontSize = MaterialTheme.typography.body1.fontSize,
                         modifier = Modifier.padding(5.dp)
@@ -489,7 +511,11 @@ fun DeleteUser(
                                         computeSHAHash(password)
                                     )
                                 else
-                                    scaffoldState.snackbarHostState.showSnackbar("Admin 비밀번호를 입력하세요.")
+                                    scaffoldState.snackbarHostState.showSnackbar(
+                                        context.resources.getString(
+                                            R.string.want_to_input_admin_password
+                                        )
+                                    )
                             }
                         }
                         ),
@@ -524,7 +550,11 @@ fun DeleteUser(
                                         computeSHAHash(password)
                                     )
                                 else
-                                    scaffoldState.snackbarHostState.showSnackbar("Admin 비밀번호를 입력하세요.")
+                                    scaffoldState.snackbarHostState.showSnackbar(
+                                        context.resources.getString(
+                                            R.string.want_to_input_admin_password
+                                        )
+                                    )
                             }
                         },
                         colors = ButtonDefaults.buttonColors(
@@ -532,7 +562,7 @@ fun DeleteUser(
                             contentColor = Color.White
                         )
                     ) {
-                        Text("확인")
+                        Text(stringResource(id = R.string.confirm))
                     }
                     Spacer(Modifier.width(10.dp))
 
@@ -543,7 +573,7 @@ fun DeleteUser(
                             contentColor = Color.White
                         )
                     ) {
-                        Text("취소")
+                        Text(stringResource(id = R.string.cancel))
                     }
                 }
             }

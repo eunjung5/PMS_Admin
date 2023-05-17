@@ -44,7 +44,10 @@ interface AuthRequestApi {
 
     @FormUrlEncoded
     @POST("check_pw.php")   //관리자 비밀번호 check
-    suspend fun checkAdminPassword( @Field("user_id") user_id: String, @Field("sha1")sha1: String): Response<ResponseResult>
+    suspend fun checkAdminPassword(
+        @Field("user_id") user_id: String,
+        @Field("sha1") sha1: String
+    ): Response<ResponseResult>
 }
 
 interface RequestApi {
@@ -94,4 +97,40 @@ interface RequestApi {
         @Field("work") work: String,
         @Field("user_id") user_id: String,
     ): Response<ResponseResult>
+
+    @FormUrlEncoded
+    @POST("sites.php")  //site list 불러오기
+    suspend fun getSiteList(
+        @Field("work") work: String,
+    ): Response<List<SiteListResult>>
+
+    @FormUrlEncoded
+    @POST("sites.php")  //site id & name 불러오기
+    suspend fun getSitesId(
+        @Field("work") work: String,
+    ): Response<SiteIDResult>
+
+    @FormUrlEncoded
+    @POST("sites.php")  //site name 중복체크
+    suspend fun checkDuplicatedSiteName(
+        @Field("work") work: String,
+        @Field("site_name") site_name: String,
+    ): Response<ResponseResult>
+
+    @FormUrlEncoded
+    @POST("sites.php")  //site 등록
+    suspend fun registerSite(
+        @Field("work") work: String,
+        @Field("site_id") site_id: String,
+        @Field("site_name") site_name: String,
+        @Field("site_addr") site_addr: String,
+        @Field("descr") descr: String
+    ): Response<ResponseResult>
+
+    @FormUrlEncoded
+    @POST("sites.php")  //site 수정 정보 불러오기
+    suspend fun getSiteInfo( @Field("work") work: String, @Field("site_id")site_id:String): Response<SiteInfoResult>
+    @FormUrlEncoded
+    @POST("sites.php")  //mpu list 불러오기
+    suspend fun getMPUList(@Field("work") work: String,@Field("site_id")site_id:String):Response<List<SiteMPUListResult>>
 }

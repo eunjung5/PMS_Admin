@@ -1,6 +1,6 @@
 package com.pms.admin.ui.views.managerManagement
 
-import android.util.Log
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -18,7 +18,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -26,26 +28,31 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.pms.admin.MainActivity
+import com.pms.admin.PMSAdminApplication
 import com.pms.admin.R
 import com.pms.admin.WindowType
+import com.pms.admin.domain.util.PMSAndroidViewModelFactory
 import com.pms.admin.rememberWindowSize
-import com.pms.admin.ui.MainViewModel
+import com.pms.admin.ui.viewModels.MainViewModel
 import com.pms.admin.ui.component.menu.Header
 import com.pms.admin.ui.component.menu.SidebarMenu
 import com.pms.admin.ui.theme.AdminBackground
 import com.pms.admin.ui.theme.ContentLine
 import com.pms.admin.ui.theme.ContentsBackground
+import com.pms.admin.ui.viewModels.ManagerViewModel
 import com.pms.admin.util.computeSHAHash
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ManagerPasswordEdit(
     navController: NavHostController,
-    viewModel: MainViewModel,
     userId: String,
+    managerViewModel: ManagerViewModel = viewModel(factory = PMSAndroidViewModelFactory( PMSAdminApplication.getInstance())),
+    viewModel: MainViewModel = viewModel(LocalContext.current as ComponentActivity),
 ) {
     val scaffoldState = rememberScaffoldState()
     var id by rememberSaveable { mutableStateOf("") }
@@ -60,26 +67,32 @@ fun ManagerPasswordEdit(
     val focusRequester = remember { FocusRequester() }
     val window = rememberWindowSize()
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
-    LaunchedEffect(key1 = userId) {
-        viewModel.getUserInfo(userId)
+    LaunchedEffect(userId) {
+        managerViewModel.getUserInfo(userId)
 
-        viewModel.userInfo.collect { user ->
+        managerViewModel.userInfo.collect { user ->
             id = user.user_id
             name = user.name
             tel = user.tel
         }
     }
 
-    LaunchedEffect(key1 = true) {
-
-        viewModel.result.collect { result ->
+    LaunchedEffect(true) {
+        managerViewModel.result.collect { result ->
             if (result){
-                scaffoldState.snackbarHostState.showSnackbar( "비밀번호가 재설정 되었습니다."  )
+                val job = scope.launch{
+                    scaffoldState.snackbarHostState.showSnackbar( context.resources.getString(R.string.reset_password_success)  )
+                }
+
+                delay(1000)
+                job.cancel()
+
                 navController.popBackStack()
             }
             else{
-                scaffoldState.snackbarHostState.showSnackbar( "비밀번호가 재설정이 실패 되었습니다.")
+                scaffoldState.snackbarHostState.showSnackbar( context.resources.getString(R.string.reset_password_fail))
             }
 
         }
@@ -99,7 +112,7 @@ fun ManagerPasswordEdit(
             SidebarMenu(navController, 0)
 
             Column(modifier = Modifier.fillMaxSize()) {
-                Header(navController, viewModel, "관리자 PW 변경", R.drawable.lock_reset)
+                Header(navController, viewModel, stringResource(id = R.string.reset_password), R.drawable.lock_reset)
 
                 Column(
                     modifier = Modifier
@@ -189,7 +202,7 @@ fun ManagerPasswordEdit(
                             ) {
                                 Row(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "이름",
+                                        text = stringResource(id = R.string.name),
                                         color = Color.White,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -243,7 +256,7 @@ fun ManagerPasswordEdit(
                             ) {
                                 Row(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "전화번호",
+                                        text = stringResource(id = R.string.telephone),
                                         color = Color.White,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -297,7 +310,7 @@ fun ManagerPasswordEdit(
                             ) {
                                 Row(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Password",
+                                        text = stringResource(id = R.string.password),
                                         color = Color.White,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -362,7 +375,7 @@ fun ManagerPasswordEdit(
                             ) {
                                 Row(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Password 확인",
+                                        text = stringResource(id = R.string.password_confirm),
                                         color = Color.White,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -431,7 +444,7 @@ fun ManagerPasswordEdit(
                                 ) {
 
                                     Text(
-                                        text = "SMS 전송",
+                                        text = stringResource(id = R.string.send_sms),
                                         color = Color.White,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -454,7 +467,7 @@ fun ManagerPasswordEdit(
                                     )
 
                                     Spacer(Modifier.width(5.dp))
-                                    Text("수신", color = Color.White)
+                                    Text(stringResource(id = R.string.receive_sms), color = Color.White)
                                 }
 
                             }
@@ -475,19 +488,19 @@ fun ManagerPasswordEdit(
                                     colors = ButtonDefaults.buttonColors(backgroundColor = Color.Gray),
                                     onClick = {
                                         if (password == checkPassword) {
-                                            viewModel.updateUserPassword(
+                                            managerViewModel.updateUserPassword(
                                                 userId,
                                                 computeSHAHash(password)
                                             )
                                         } else {
                                             scope.launch {
-                                                scaffoldState.snackbarHostState.showSnackbar("비밀번호와 비밀번호 확인이 일치하지 않습니다.")
+                                                scaffoldState.snackbarHostState.showSnackbar(context.resources.getString(R.string.not_match_password))
                                             }
                                         }
 
 
                                     }) {
-                                    Text(text = "저장", color = Color.White)
+                                    Text(text = stringResource(id = R.string.store), color = Color.White)
                                 }
 
                                 Spacer(Modifier.width(10.dp))
@@ -502,7 +515,7 @@ fun ManagerPasswordEdit(
                                     onClick = {
                                         navController.popBackStack()
                                     }) {
-                                    Text(text = "취소", color = Color.White)
+                                    Text(text =  stringResource(id = R.string.cancel), color = Color.White)
                                 }
                             }
                         }

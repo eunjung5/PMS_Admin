@@ -7,11 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Icon
 import androidx.compose.material.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -26,7 +23,7 @@ import com.pms.admin.MainActivity
 import com.pms.admin.R
 import com.pms.admin.WindowType
 import com.pms.admin.rememberWindowSize
-import com.pms.admin.ui.MainViewModel
+import com.pms.admin.ui.viewModels.MainViewModel
 import kotlinx.coroutines.launch
 
 @Composable

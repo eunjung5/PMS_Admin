@@ -65,4 +65,3 @@ data class JobListResult(
     @SerializedName("result")
     val result: Boolean = false,
 )
-

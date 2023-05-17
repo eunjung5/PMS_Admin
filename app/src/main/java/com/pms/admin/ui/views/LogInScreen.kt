@@ -1,6 +1,7 @@
 package com.pms.admin.ui.pages
 
 import android.util.Log
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -36,11 +37,12 @@ import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pms.admin.MainActivity.Companion.TAG
 import com.pms.admin.R
 import com.pms.admin.WindowType
 import com.pms.admin.rememberWindowSize
-import com.pms.admin.ui.MainViewModel
+import com.pms.admin.ui.viewModels.MainViewModel
 import com.pms.admin.ui.theme.AdminBackground
 import com.pms.admin.ui.theme.ContentsBackground
 import com.pms.admin.util.NetworkManager
@@ -51,7 +53,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun LogInScreen(
-   viewModel: MainViewModel
+    viewModel: MainViewModel = viewModel(LocalContext.current as ComponentActivity),
 ) {
     //아이디와 비밀번호 입력
     var id by rememberSaveable { mutableStateOf("admin2") }
@@ -68,11 +70,10 @@ fun LogInScreen(
 
     val window = rememberWindowSize()
 
-    Log.d(TAG, "window size = $window")
+    Log.e(TAG, "window size = $window, viewmodel = ${viewModel}")
     LaunchedEffect(tryLogin){
         viewModel.logInSession.collect { connected ->
             Log.d(TAG,"LogInScreen  logInSession=    try : $tryLogin   connected = $connected")
-
             if(tryLogin)
             {
                 if (!connected) {

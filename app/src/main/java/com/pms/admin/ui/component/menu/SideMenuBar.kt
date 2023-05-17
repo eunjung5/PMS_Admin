@@ -40,7 +40,7 @@ fun SidebarMenu(
     var selectedItem by remember { mutableStateOf(selected) }
     val icons = listOf(
         IconLink(R.drawable.menu_manager, "manager_management"),
-        IconLink(R.drawable.menu_site, ""),
+        IconLink(R.drawable.menu_site, "site_management"),
         IconLink(R.drawable.menu_mpu, ""),
         IconLink(R.drawable.menu_search, ""),
         IconLink(R.drawable.menu_kesco, ""),
@@ -92,6 +92,8 @@ fun SidebarMenu(
                 selected = selectedItem == index,
                 onClick = {
                     selectedItem = index
+                    navController.navigate(icons[index].url)
+
                     Log.d(TAG, "select icon = ${icons[index].url}")
                 },
                 selectedContentColor = Color.Red,

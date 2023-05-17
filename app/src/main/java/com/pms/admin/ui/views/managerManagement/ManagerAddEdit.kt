@@ -1,6 +1,9 @@
 package com.pms.admin.ui.views.managerManagement
 
+import android.content.Context
+import android.text.Editable.Factory
 import android.util.Log
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -21,30 +24,37 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.pms.admin.MainActivity.Companion.TAG
+import com.pms.admin.PMSAdminApplication
 import com.pms.admin.R
 import com.pms.admin.WindowType
+import com.pms.admin.domain.util.PMSAndroidViewModelFactory
 import com.pms.admin.model.Mode
 import com.pms.admin.rememberWindowSize
-import com.pms.admin.ui.MainViewModel
+import com.pms.admin.ui.viewModels.MainViewModel
+import com.pms.admin.ui.component.common.RegisterItem
 import com.pms.admin.ui.component.menu.Header
 import com.pms.admin.ui.component.menu.SidebarMenu
 import com.pms.admin.ui.theme.AdminBackground
 import com.pms.admin.ui.theme.ContentLine
 import com.pms.admin.ui.theme.ContentsBackground
+import com.pms.admin.ui.viewModels.ManagerViewModel
 import com.pms.admin.util.computeSHAHash
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 data class FocusItem(val currentFocus: FocusRequester, val nextFocus: FocusRequester?)
 
@@ -52,14 +62,21 @@ data class FocusItem(val currentFocus: FocusRequester, val nextFocus: FocusReque
 @Composable
 fun ManagerAddEdit(
     navController: NavHostController,
-    viewModel: MainViewModel,
     userId: String,
+    viewModel: MainViewModel = viewModel(LocalContext.current as ComponentActivity),
+    managerViewModel: ManagerViewModel = viewModel(
+        factory = PMSAndroidViewModelFactory(
+            PMSAdminApplication.getInstance()
+        )
+    )
 ) {
     val scaffoldState = rememberScaffoldState()
-    var id by rememberSaveable { mutableStateOf("") }
-    var name by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
-    var tel by rememberSaveable { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+
+    var id by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var tel by remember { mutableStateOf("") }
     val radioOptions = listOf("관리자L1", "관리자L2", "개발자")
     val (selectedOption, onOptionSelected) = remember { mutableStateOf(radioOptions[0]) }
 
@@ -71,47 +88,48 @@ fun ManagerAddEdit(
     val window = rememberWindowSize()
     val mode: Mode = if (userId.isEmpty()) Mode.Add else Mode.Edit
 
-    //아이디 중복 체크
-    LaunchedEffect(key1 = true) {
-        viewModel.checkDuplicatedId.collect { checkDuplicatedId ->
-            if (checkDuplicatedId)
-                scaffoldState.snackbarHostState.showSnackbar("중복된 아이디입니다.")
-            else
-                scaffoldState.snackbarHostState.showSnackbar("사용 가능한 아이디입니다.")
-        }
-    }
-
+    var checkDuplicationID by remember { mutableStateOf(userId.isNotEmpty()) }
+    val context = LocalContext.current
+    Log.e(TAG, " init checkDuplicationID = $checkDuplicationID")
     //사용자 등록 및 수정 성공,실패 팝업창
-    LaunchedEffect(key1 = true) {
-        viewModel.registerUserResult.collect { result ->
-            if (result){
-                if(mode == Mode.Add)
-                    scaffoldState.snackbarHostState.showSnackbar("사용자가 등록 성공입니다.")
-                else 
-                    scaffoldState.snackbarHostState.showSnackbar("사용자가 수정 성공입니다.")
-                navController.popBackStack()
-            }
-            else{
-                if(mode == Mode.Add)
-                    scaffoldState.snackbarHostState.showSnackbar("사용자가 등록 실패입니다.")
-                else
-                    scaffoldState.snackbarHostState.showSnackbar("사용자가 수정 실패입니다.")
-            }
+    LaunchedEffect(true) {
+        managerViewModel.registerUserResult.collect { response ->
+            val result =
+                if (mode == Mode.Add) context.resources.getString(R.string.register) else context.resources.getString(
+                    R.string.modify
+                )
 
+            if (response) {
+                val job = scope.launch {
+                    scaffoldState.snackbarHostState.showSnackbar(
+                        message = String.format(
+                            context.resources.getString(R.string.user_register_success),
+                            result
+                        ),
+                        duration = SnackbarDuration.Indefinite
+                    )
+                }
+                delay(1000)
+                job.cancel()
+
+                navController.popBackStack()
+            } else {
+                scaffoldState.snackbarHostState.showSnackbar(
+                    String.format(
+                        context.resources.getString(R.string.user_register_fail),
+                        result
+                    )
+                )
+            }
         }
     }
 
     //사용자 정보 불러오기
-    LaunchedEffect(key1 = userId) {
-        viewModel.getUserInfo(userId)
+    LaunchedEffect(userId) {
+        managerViewModel.getUserInfo(userId)
 
-        viewModel.userInfo.collect { user ->
-            val role = when (user.role) {
-                "manager1" -> "관리자L1"
-                "manager2" -> "관리자L2"
-                else -> "개발자"
-            }
-            onOptionSelected(role)
+        managerViewModel.userInfo.collect { user ->
+            onOptionSelected(getRoleString(context, user.role))
             id = user.user_id
             name = user.name
             tel = user.tel
@@ -133,10 +151,20 @@ fun ManagerAddEdit(
 
             Column(modifier = Modifier.fillMaxSize()) {
                 if (mode == Mode.Add)
-                    Header(navController, viewModel, "관리자 생성", R.drawable.person_add)
+                    Header(
+                        navController,
+                        viewModel,
+                        stringResource(R.string.manager_create),
+                        R.drawable.person_add
+                    )
                 else
-                    Header(navController, viewModel, "관리자 수정", R.drawable.person_add) //아이콘 차후 수정
-                
+                    Header(
+                        navController,
+                        viewModel,
+                        stringResource(R.string.manager_modify),
+                        R.drawable.person_add
+                    ) //아이콘 차후 수정
+
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -144,7 +172,7 @@ fun ManagerAddEdit(
                         .padding(
                             start = if (window.height == WindowType.Medium) 50.dp else 30.dp,
                             end = if (window.height == WindowType.Medium) 50.dp else 30.dp,
-                            bottom = if (window.height == WindowType.Medium) 50.dp else 30.dp
+                            bottom = 30.dp
                         )
                         .background(color = ContentsBackground, shape = RoundedCornerShape(30.dp)),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -242,7 +270,7 @@ fun ManagerAddEdit(
                                                     .width(5.dp)
                                             )
                                             if (mode == Mode.Add) Text(
-                                                text = "영문/숫자 혼용 5글자 이상 입력해주세요.",
+                                                text = stringResource(R.string.id_description),
                                                 color = Color.LightGray
                                             )
                                         }
@@ -266,13 +294,34 @@ fun ManagerAddEdit(
                                         Button(colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red),
                                             onClick = {
                                                 keyboardController?.hide()
-                                                viewModel.checkDuplicatedId(id)
+                                                managerViewModel.checkDuplicatedId(id)
+
+                                                //아이디 중복 체크
+                                                scope.launch {
+                                                    managerViewModel.checkDuplicatedId.collect { duplicated ->
+                                                        val text =
+                                                            if (duplicated) String.format(
+                                                                context.resources.getString(R.string.duplicate_fail),
+                                                                "아이디"
+                                                            ) else String.format(
+                                                                context.resources.getString(R.string.duplicate_success),
+                                                                "아이디"
+                                                            )
+                                                        checkDuplicationID = !duplicated
+                                                        scaffoldState.snackbarHostState.showSnackbar(
+                                                            text
+                                                        )
+                                                    }
+                                                }
+
                                             }) {
-                                            Text(text = "중복확인", color = Color.White)
+                                            Text(
+                                                text = stringResource(id = R.string.duplicate_check),
+                                                color = Color.White
+                                            )
                                         }
                                     }
-                                }
-                                else{
+                                } else {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -286,16 +335,16 @@ fun ManagerAddEdit(
 
                         //name text
                         item {
-                            RegisterUserItem(
-                                title = "이름",
+                            RegisterItem(
+                                title = stringResource(id = R.string.name),
                                 item = name,
-                                assistance = "2 ~ 10 글자 안으로 입력해주세요.",
+                                assistance = stringResource(id = R.string.name_description),
                                 required = (mode == Mode.Add),
                                 focusItem = FocusItem(
                                     nameFocus,
                                     if (mode == Mode.Add) passwordFocus else telFocus
                                 ),
-                                onTextValueChange = {name = it}
+                                onTextValueChange = { name = it }
                             )
                         }
 
@@ -325,7 +374,7 @@ fun ManagerAddEdit(
                                         }
                                         Spacer(Modifier.width(10.dp))
                                         Text(
-                                            text = "Level",
+                                            text = stringResource(id = R.string.level),
                                             color = Color.White,
                                             fontWeight = FontWeight.Bold
                                         )
@@ -343,13 +392,11 @@ fun ManagerAddEdit(
                                                 Modifier
                                                     .fillMaxWidth()
                                                     .weight(4f)
-                                                    // .height(56.dp)
                                                     .selectable(
                                                         selected = (text == selectedOption),
                                                         onClick = { onOptionSelected(text) },
                                                         role = Role.RadioButton
                                                     ),
-                                                //.padding(horizontal = 16.dp),
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
                                                 RadioButton(
@@ -362,7 +409,6 @@ fun ManagerAddEdit(
                                                 )
                                                 Text(
                                                     text = text,
-                                                    //style = MaterialTheme.typography.body1,
                                                     modifier = Modifier.padding(start = 5.dp),
                                                     color = Color.White
                                                 )
@@ -383,13 +429,13 @@ fun ManagerAddEdit(
                         if (mode == Mode.Add) {
                             //password text
                             item {
-                                RegisterUserItem(
-                                    title = "Password",
+                                RegisterItem(
+                                    title = stringResource(id = R.string.password),
                                     item = password,
                                     assistance = "",
                                     required = true,
                                     focusItem = FocusItem(passwordFocus, telFocus),
-                                    onTextValueChange = {password = it}
+                                    onTextValueChange = { password = it }
                                 )
                             }
                         }
@@ -397,29 +443,54 @@ fun ManagerAddEdit(
 
                         //tel text
                         item {
-                            RegisterUserItem(
-                                title = "전화번호",
-                                item =  tel,
+                            RegisterItem(
+                                title = stringResource(id = R.string.telephone),
+                                item = tel,
                                 assistance = "",
                                 required = false,
                                 focusItem = FocusItem(telFocus, null),
                                 onDone = {
                                     keyboardController?.hide()
+                                    var message: String = ""
 
-                                    val role = when (selectedOption) {
-                                        "관리자L1" -> "manager1"
-                                        "관리자L2" -> "manager2"
-                                        else -> "developer"
+                                    if (checkDuplicationID) {
+                                        if (id.isNotEmpty() && name.isNotEmpty() && password.isNotEmpty()) {
+                                            if (mode == Mode.Add) {
+                                                managerViewModel.registerUser(
+                                                    id,
+                                                    getRoleString(context, selectedOption),
+                                                    name,
+                                                    computeSHAHash(password),
+                                                    tel
+                                                )
+                                            } else {
+                                                managerViewModel.updateUser(
+                                                    id,
+                                                    getRoleString(context, selectedOption),
+                                                    name,
+                                                    tel
+                                                )
+                                            }
+                                        } else {
+                                            message =
+                                                context.resources.getString(R.string.required_msg)
+                                        }
+
+                                    } else {
+                                        message = String.format(
+                                            context.resources.getString(
+                                                R.string.duplicate_confirm,
+                                                "아이디"
+                                            )
+                                        )
+
                                     }
-                                    viewModel.registerUser(
-                                        id,
-                                        role,
-                                        name,
-                                        computeSHAHash(password),
-                                        tel
-                                    )
+                                    if (message.isNotEmpty())
+                                        scope.launch {
+                                            scaffoldState.snackbarHostState.showSnackbar(message)
+                                        }
                                 },
-                                onTextValueChange = {tel = it}
+                                onTextValueChange = { tel = it }
                             )
 
                         }
@@ -427,7 +498,9 @@ fun ManagerAddEdit(
                         //저장 and 취소 buttons
                         item {
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 30.dp),
                                 horizontalArrangement = Arrangement.Center
                             ) {
                                 Button(
@@ -438,34 +511,47 @@ fun ManagerAddEdit(
                                     ),
                                     colors = ButtonDefaults.buttonColors(backgroundColor = Color.Gray),
                                     onClick = {
-                                        val role = when (selectedOption) {
-                                            "관리자L1" -> "manager1"
-                                            "관리자L2" -> "manager2"
-                                            else -> "developer"
-                                        }
-                                        Log.e(TAG, "name = $name, tel = $tel")
-                                        if(mode == Mode.Add)
-                                        {
-                                            viewModel.registerUser(
-                                                id,
-                                                role,
-                                                name,
-                                                computeSHAHash(password),
-                                                tel
-                                            )
-                                        }
-                                        else{
-                                            viewModel.updateUser(
-                                                id,
-                                                role,
-                                                name,
-                                                tel
-                                            )
-                                        }
 
+                                        var message: String = ""
+                                        if (checkDuplicationID) {
+                                            if (id.isNotEmpty() && name.isNotEmpty() && password.isNotEmpty()) {
+                                                if (mode == Mode.Add) {
+                                                    managerViewModel.registerUser(
+                                                        id,
+                                                        getRoleString(context, selectedOption),
+                                                        name,
+                                                        computeSHAHash(password),
+                                                        tel
+                                                    )
+                                                } else {
+                                                    managerViewModel.updateUser(
+                                                        id,
+                                                        getRoleString(context, selectedOption),
+                                                        name,
+                                                        tel
+                                                    )
+                                                }
+                                            } else {
+                                                message =
+                                                    context.resources.getString(R.string.required_msg)
+                                            }
+
+                                        } else {
+                                            message = String.format(
+                                                context.resources.getString(
+                                                    R.string.duplicate_confirm,
+                                                    "아이디"
+                                                )
+                                            )
+
+                                        }
+                                        if (message.isNotEmpty())
+                                            scope.launch {
+                                                scaffoldState.snackbarHostState.showSnackbar(message)
+                                            }
 
                                     }) {
-                                    Text(text = "저장", color = Color.White)
+                                    Text(text = stringResource(R.string.store), color = Color.White)
                                 }
 
                                 Spacer(Modifier.width(10.dp))
@@ -480,134 +566,31 @@ fun ManagerAddEdit(
                                     onClick = {
                                         navController.popBackStack()
                                     }) {
-                                    Text(text = "취소", color = Color.White)
+                                    Text(
+                                        text = stringResource(R.string.cancel),
+                                        color = Color.White
+                                    )
                                 }
                             }
                         }
                     }
-
                 }
-
-
             }
-
         }
     }
-
 }
 
-@Composable
-fun RegisterUserItem(
-    title: String,
-    item: String,
-    assistance: String,
-    required: Boolean,
-    focusItem: FocusItem,
-    onDone: (() -> Unit)? = null,
-    onTextValueChange: (String) -> Unit,
-) {
-    var content by remember { mutableStateOf(item) }
-    Log.d(TAG, "$title = $item, content = $content")
-    val focusManager = LocalFocusManager.current
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 30.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(4f)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(top = 30.dp),
-            ) {
-                if (required){
-                    Text(text = "*" , color = Color.Red)
-                }
-
-                Spacer(Modifier.width(10.dp))
-                Text(text = title, color = Color.White, fontWeight = FontWeight.Bold)
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(5f)
-                    .width(100.dp)
-                    .padding(10.dp)
-            ) {
-                TextField(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(
-                            width = 1.dp,
-                            color = ContentLine,
-                            shape = RoundedCornerShape(5.dp)
-                        )
-                        .focusRequester(focusItem.currentFocus)
-                        .focusProperties {
-                            focusItem.nextFocus.let {
-                                if (it != null) {
-                                    next = it
-                                }
-                            }
-                        },
-                    value = item,
-                    maxLines = 1,
-                    onValueChange = onTextValueChange,
-                    shape = RoundedCornerShape(5.dp),
-                    textStyle = TextStyle(
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    ),
-                    visualTransformation = if (title === "Password") PasswordVisualTransformation() else VisualTransformation.None,
-                    colors = TextFieldDefaults.textFieldColors(
-                        backgroundColor = ContentsBackground,
-                        focusedIndicatorColor = Color.Transparent,   //hide the indicator
-                        unfocusedIndicatorColor = Color.Transparent,
-                        cursorColor = Color.White,
-                    ),
-
-                    keyboardOptions = if (title == "전화번호") KeyboardOptions.Default.copy(imeAction = ImeAction.Done) else KeyboardOptions.Default.copy(
-                        imeAction = ImeAction.Next
-                    ),
-                    keyboardActions = KeyboardActions(onNext = {
-
-                        focusManager.moveFocus(FocusDirection.Next)
-                    },
-                        onDone = {
-                            if (onDone != null) {
-                                onDone()
-                            }
-                        }),
-                )
-                Spacer(
-                    Modifier
-                        .height(5.dp)
-                        .width(5.dp)
-                )
-                if (assistance.isNotEmpty()) Text(
-                    text = assistance, color = Color.LightGray,
-                    modifier = Modifier.padding(start = 10.dp)
-                )
-            }
-        }
-
-        //중복 확인 버튼 만큼 공간 비우기
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-        ) {}
-
+fun getRoleString(context: Context, level: String): String {
+    return when (level) {
+        context.resources.getString(R.string.manager1) -> context.resources.getString(R.string.manager1_eng)
+        context.resources.getString(R.string.manager2) -> context.resources.getString(R.string.manager2_eng)
+        context.resources.getString(R.string.developer) -> context.resources.getString(R.string.developer_eng)
+        context.resources.getString(R.string.manager1_eng) -> context.resources.getString(R.string.manager1)
+        context.resources.getString(R.string.manager2_eng) -> context.resources.getString(R.string.manager2)
+        context.resources.getString(R.string.developer_eng) -> context.resources.getString(R.string.developer)
+        else -> ""
     }
+
 }
 
 @Preview(showBackground = true, backgroundColor = 0x000000)

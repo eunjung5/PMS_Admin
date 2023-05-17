@@ -12,16 +12,15 @@ interface RemoteRepository {
 
     //user login
     suspend fun loginUser(
-        op: String = "login",
         userid: String,
         sha1: String
     ): Response<UserLoginResult>
 
     //user logout
-    suspend fun logoutUser(op: String): Response<ResponseResult>
+    suspend fun logoutUser(): Response<ResponseResult>
 
     //get manager list
-    suspend fun getManagerList(work: String): Response<List<ManagerListResult>>
+    suspend fun getManagerList(): Response<List<ManagerListResult>>
 
     //사용자 등록
     suspend fun registerUser(
@@ -37,11 +36,10 @@ interface RemoteRepository {
     suspend fun checkDuplicatedID(id: String): Response<ResponseResult>
 
     //사용자 정보 불러오기
-    suspend fun getUserInfo(work: String, user_id: String): Response<UserInfoResult>
+    suspend fun getUserInfo(user_id: String): Response<UserInfoResult>
 
     //사용자 수정
     suspend fun updateUser(
-        work: String,
         user_id: String,
         role: String,
         name: String,
@@ -50,14 +48,12 @@ interface RemoteRepository {
 
     //사용자 비밀번호 초기화
     suspend fun updateUserPassword(
-        work: String,
         user_id: String,
         sha1: String
     ): Response<ResponseResult>
 
     //관리자 작업 조회 리스트
     suspend fun getJobList(
-        work: String,
         user_id: String,
         start_date: String,
         end_date: String,
@@ -67,5 +63,11 @@ interface RemoteRepository {
 
     suspend fun checkAuthority(): Response<AuthorityResult>
     suspend fun checkAdminPassword(user_id: String, sha1: String): Response<ResponseResult>
-    suspend fun deleteUser( work: String, user_id: String): Response<ResponseResult>
+    suspend fun deleteUser(user_id: String): Response<ResponseResult>
+    suspend fun getSiteList(): Response<List<SiteListResult>>
+    suspend fun getSitesId(): Response<SiteIDResult>
+    suspend fun checkDuplicatedSiteName(siteName:String): Response<ResponseResult>
+    suspend fun registerSite(work:String,siteId:String, siteName:String, siteAddr:String, descr:String): Response<ResponseResult>
+    suspend fun getSiteInfo( site_id:String): Response<SiteInfoResult>
+    suspend fun getMPUList(mode:Mode,site_id:String):Response<List<SiteMPUListResult>>
 }

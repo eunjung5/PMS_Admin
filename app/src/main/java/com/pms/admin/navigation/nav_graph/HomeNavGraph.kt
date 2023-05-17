@@ -6,12 +6,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import com.pms.admin.navigation.HOME_GRAPH_ROUTE
 import com.pms.admin.navigation.Screen
-import com.pms.admin.ui.MainViewModel
 import com.pms.admin.ui.views.mainmenu.MainMenu
 
 fun NavGraphBuilder.homeNavGraph(
     navController: NavHostController,
-    viewModel: MainViewModel,
 ) {
    navigation(
         startDestination = Screen.Home.route,
@@ -20,7 +18,7 @@ fun NavGraphBuilder.homeNavGraph(
         composable(
             route = Screen.Home.route
         ){
-            MainMenu(viewModel,navController)
+            MainMenu(navController)
         }
     }
 }

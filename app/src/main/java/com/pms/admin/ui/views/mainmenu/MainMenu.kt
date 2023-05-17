@@ -1,19 +1,15 @@
 package com.pms.admin.ui.views.mainmenu
 
 import android.app.Activity
-import android.content.pm.ActivityInfo
 import android.util.Log
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,21 +21,20 @@ import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.pms.admin.MainActivity.Companion.TAG
-import com.pms.admin.ui.component.LockScreenOrientation
 import com.pms.admin.R
 import com.pms.admin.WindowType
 import com.pms.admin.rememberWindowSize
-import com.pms.admin.ui.MainViewModel
+import com.pms.admin.ui.viewModels.MainViewModel
 import com.pms.admin.ui.component.menu.MainMenuItem
 import kotlinx.coroutines.launch
 
 @Composable
 fun MainMenu(
-    viewModel: MainViewModel,
-    //onNavigate : (String)-> Unit = {}
-    navController: NavHostController
+    navController: NavHostController,
+    viewModel: MainViewModel = viewModel(LocalContext.current as ComponentActivity),
 ) {
     //LockScreenOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
 
@@ -160,7 +155,7 @@ fun ColumnScope.MainMeuList(
             MainMenuItem(
                 "사이트 관리",
                 painterResource(id = R.drawable.main_site),
-                "manager_management"
+                "site_management"
             ) { route ->
                 onNavigate(route)
             }
