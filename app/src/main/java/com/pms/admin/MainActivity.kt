@@ -5,18 +5,27 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.Surface
-import androidx.compose.runtime.Composable
+import androidx.compose.material.Text
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import com.pms.admin.domain.util.PMSAndroidViewModelFactory
 import com.pms.admin.navigation.nav_graph.SetupNavGraph
+import com.pms.admin.ui.component.common.CustomAlertDialog
 import com.pms.admin.ui.viewModels.MainViewModel
 import com.pms.admin.ui.theme.AdminBackground
+import com.pms.admin.ui.views.siteManagement.DeleteSite
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -28,23 +37,27 @@ class MainActivity : ComponentActivity() {
             val viewModel: MainViewModel = viewModel(
                 factory = PMSAndroidViewModelFactory(application)
             )
+//            var finishDialog by remember { mutableStateOf(false) } //서버에 권한 체크해서, 계정 문제 있을때, 종료 되도록 팝업
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = AdminBackground
+            ) {
 
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = AdminBackground
-                ) {
+                //server에 connect 유효한지 check
+//                lifecycleScope.launch {
+//                    viewModel.checkAuth.collect { result ->
+//                        Log.w(TAG, "check auth = ${result}")
+//                        if (!result) {
+//                            //finish()
+//                            finishDialog = true
+//                        }
+//                    }
+//                }
+                SetupNavGraph(navController)
 
-                    //server에 connect 유효한지 check
-                    lifecycleScope.launch{
-                        viewModel.checkAuth.collect{result ->
-                            Log.w(TAG,"check auth = ${result}")
-//                            if(!result)
-//                                finish()
-                        }
-                    }
-                      SetupNavGraph(navController)
-               }
+
             }
+        }
     }
 
     override fun onResume() {

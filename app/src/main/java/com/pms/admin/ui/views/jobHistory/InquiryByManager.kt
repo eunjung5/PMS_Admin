@@ -1,24 +1,22 @@
-package com.pms.admin.ui.views.managerManagement
+package com.pms.admin.ui.views.jobHistory
 
 import android.app.DatePickerDialog
-import android.os.Build
 import androidx.activity.ComponentActivity
-import androidx.annotation.RequiresApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -29,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -36,33 +35,39 @@ import com.pms.admin.PMSAdminApplication
 import com.pms.admin.R
 import com.pms.admin.WindowType
 import com.pms.admin.domain.util.PMSAndroidViewModelFactory
-import com.pms.admin.model.JobListResult
+import com.pms.admin.model.response.JobListResult
+import com.pms.admin.model.response.UserIdListResult
+import com.pms.admin.model.response.UserJobListResult
 import com.pms.admin.rememberWindowSize
-import com.pms.admin.ui.viewModels.MainViewModel
 import com.pms.admin.ui.component.menu.Header
 import com.pms.admin.ui.component.menu.SidebarMenu
 import com.pms.admin.ui.component.table.TableCell
 import com.pms.admin.ui.theme.CalendarBackground
 import com.pms.admin.ui.theme.ContentsBackground
 import com.pms.admin.ui.theme.MenuBackground
-import com.pms.admin.ui.viewModels.ManagerViewModel
+import com.pms.admin.ui.viewModels.JobHistoryViewModel
+import com.pms.admin.ui.viewModels.MainViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
-fun ManagerJobSearch(
+fun InquiryByManager(
     navController: NavHostController,
-    userId: String,
     viewModel: MainViewModel = viewModel(LocalContext.current as ComponentActivity),
-    managerViewModel: ManagerViewModel = viewModel(factory = PMSAndroidViewModelFactory( PMSAdminApplication.getInstance())),
+    jobHistoryViewModel: JobHistoryViewModel = viewModel(
+        factory = PMSAndroidViewModelFactory(
+            PMSAdminApplication.getInstance()
+        )
+    ),
 ) {
-    var jobList = managerViewModel.jobList
+
     val window = rememberWindowSize()
+    val context = LocalContext.current
     // 출력 포맷 지정
     var dataFormat = SimpleDateFormat("yyyy/M/d")
 
-    var calendar by remember{mutableStateOf(Calendar.getInstance())}
-    var before7Calendar by remember{
+    var calendar by remember { mutableStateOf(Calendar.getInstance()) }
+    var before7Calendar by remember {
         val calendar = Calendar.getInstance()
         calendar.add(Calendar.DATE, -7)
         mutableStateOf(calendar)
@@ -73,14 +78,11 @@ fun ManagerJobSearch(
         mutableStateOf(dataFormat.format(before7Calendar.time))
     }
 
-    var searchContent by remember { mutableStateOf("") }
-
-    val context = LocalContext.current
     val datePickerDialog = DatePickerDialog(
-        context ,
+        context,
         { _, year, month, dayofMonth ->
-            calendar.set(year,month,dayofMonth)
-            currentDate =  "$year/${month+1}/$dayofMonth"
+            calendar.set(year, month, dayofMonth)
+            currentDate = "$year/${month + 1}/$dayofMonth"
         },
         calendar.get(Calendar.YEAR),
         calendar.get(Calendar.MONTH),
@@ -88,30 +90,53 @@ fun ManagerJobSearch(
     )
 
     val before7DatePickerDialog = DatePickerDialog(
-        context ,
+        context,
         { _, year, month, dayofMonth ->
-            before7Calendar.set(year,month,dayofMonth)
-            before7Date =  "$year/${month+1}/$dayofMonth"
+            before7Calendar.set(year, month, dayofMonth)
+            before7Date = "$year/${month + 1}/$dayofMonth"
         },
         before7Calendar.get(Calendar.YEAR),
         before7Calendar.get(Calendar.MONTH),
         before7Calendar.get(Calendar.DAY_OF_MONTH)
     )
 
+
+    var jobList by remember { mutableStateOf(emptyList<UserJobListResult>()) }
+    var userId by remember {mutableStateOf("")}
+    var userIdList by remember { mutableStateOf(emptyList<UserIdListResult>()) }
+
     LaunchedEffect(true) {
-        managerViewModel.getJobList(
-            user_id = userId,
-            start_date = before7Date,
-            end_date = currentDate,
-            contents = searchContent,
-            page = 0)
+        jobHistoryViewModel.getUserIdList()
+
+        jobHistoryViewModel.userIdList.collect {
+            userIdList = it
+            userId = userIdList[0].user_id
+        }
+    }
+
+    LaunchedEffect(userId) {
+        jobHistoryViewModel.getDateIdSearch(
+            startDate = before7Date,
+            endDate = currentDate,
+            userId = userId,
+            page = 0
+        )
+
+        jobHistoryViewModel.jobDataIdList.collect {
+            jobList = it
+        }
     }
 
     Row(modifier = Modifier.fillMaxSize()) {
-        SidebarMenu(navController, 0)
+        SidebarMenu(navController, 3)
 
         Column(modifier = Modifier.fillMaxSize()) {
-            Header(navController, viewModel, stringResource(id = R.string.manager_job_search), R.drawable.person_search)
+            Header(
+                navController,
+                viewModel,
+                stringResource(id = R.string.inquiry_by_user),
+                R.drawable.person_search
+            )
 
             //search mode button
             Column(
@@ -122,7 +147,7 @@ fun ManagerJobSearch(
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(start = 10.dp, end = 10.dp),
+                        .padding(start = 30.dp, end = 30.dp),
                 )
                 {
                     Column(
@@ -231,7 +256,7 @@ fun ManagerJobSearch(
                                                     .clickable { datePickerDialog.show() },
                                                 tint = Color.White,
 
-                                            )
+                                                )
                                         }
                                     )
                                 }
@@ -248,12 +273,12 @@ fun ManagerJobSearch(
                                 ) {
                                     Button(
                                         onClick = {
-                                            managerViewModel.getJobList(
-                                                user_id = userId,
-                                                start_date = before7Date,
-                                                end_date = currentDate,
-                                                contents = searchContent,
-                                                page = 0)
+                                            jobHistoryViewModel.getDateIdSearch(
+                                                startDate = before7Date,
+                                                endDate = currentDate,
+                                                userId = userId,
+                                                page = 0
+                                            )
                                         },
                                         colors = ButtonDefaults.buttonColors(backgroundColor = MenuBackground),
                                         shape = RoundedCornerShape(50.dp),
@@ -267,7 +292,9 @@ fun ManagerJobSearch(
                                 }
                             }
 
-                            //작업 내용 조회
+                            //이동 메뉴 버튼
+
+                            //작업자 선택
                             Row(
                                 modifier = Modifier.weight(3f),
                                 horizontalArrangement = Arrangement.End
@@ -276,42 +303,19 @@ fun ManagerJobSearch(
                                     verticalArrangement = Arrangement.Center,
                                 ) {
                                     Text(
-                                        text = stringResource(R.string.job_content_inquiry),
+                                        text = stringResource(R.string.job_user_inquiry),
                                         color = Color.White,
                                         modifier = Modifier
                                             .padding(start = 5.dp)
                                     )
                                     Spacer(Modifier.height(10.dp))
-                                    TextField(
-                                        modifier = Modifier
-                                            .padding(start = 5.dp, end = 5.dp),
-                                        value = searchContent,
-                                        maxLines = 1,
-                                        onValueChange = { searchContent = it },
-                                        shape = RoundedCornerShape(5.dp),
-                                        textStyle = TextStyle(
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Bold,
-                                            textDecoration = TextDecoration.None,
-                                        ),
-                                        colors = TextFieldDefaults.textFieldColors(
-                                            backgroundColor = ContentsBackground,
-                                            focusedIndicatorColor = Color.Transparent,   //hide the indicator
-                                            unfocusedIndicatorColor = Color.Transparent,
-                                            cursorColor = Color.White,
-                                        ),
-                                        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
-                                        keyboardActions = KeyboardActions(onDone = {
 
-                                        }),
-                                        trailingIcon = {
-                                            Icon(
-                                                imageVector = Icons.Outlined.Search,
-                                                contentDescription = "search icon",
-                                                tint = Color.White
-                                            )
-                                        }
-                                    )
+                                    //user id list
+                                    UserIdList(userIdList) {
+                                        userId = it
+                                    }
+
+
 
                                 }
                             }
@@ -325,35 +329,100 @@ fun ManagerJobSearch(
                     .fillMaxSize()
                     .weight(if (window.height == WindowType.Medium) 4f else 3f)
             ) {
-                ManagerJobList(
-                    dataList = jobList.value,
+                DateIdJobList(
+                    dataList = jobList,
                 )
             }
         }
 
     }
 }
+
 @Composable
-fun ColumnScope.ManagerJobList(
-    dataList: List<JobListResult>,
+fun UserIdList(
+    userIdList:List<UserIdListResult>,
+    selectUserId: (userId:String)->Unit,
+) {
+    var isExpandedList by remember { mutableStateOf(false) }
+    var userId by remember { mutableStateOf("") }
+
+    LaunchedEffect(userIdList){
+        userId = if(userIdList.isNotEmpty())userIdList[0].user_id else ""
+        selectUserId(userId)
+    }
+    Button(
+        onClick = { isExpandedList = !isExpandedList },
+        modifier = Modifier
+            .width(200.dp),
+        colors = ButtonDefaults.buttonColors(backgroundColor = CalendarBackground)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(CalendarBackground),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(text = userId, color = Color.White)
+
+            Icon(
+                imageVector = Icons.Default.ArrowDropDown,
+                contentDescription = "down"
+            )
+        }
+    }
+
+    DropdownMenu(
+        modifier = Modifier
+            .width(200.dp)
+            .background(CalendarBackground)
+            .requiredSizeIn(maxHeight = 200.dp),
+        expanded = isExpandedList,
+        onDismissRequest = { isExpandedList = false },
+    ) {
+
+        userIdList?.forEach { user ->
+            DropdownMenuItem(
+                modifier = Modifier.width(200.dp),
+                onClick = {
+                    isExpandedList = false
+                    userId = user.user_id
+                    selectUserId(userId)
+
+                }) {
+                Text(text = user.user_id, color = Color.White)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ColumnScope.DateIdJobList(
+    dataList: List<UserJobListResult>,
 ) {
     val context = LocalContext.current
-    val headers = listOf(stringResource(R.string.manager), stringResource(R.string.job_time), stringResource(R.string.job_content), stringResource(R.string.job_description))
-    val weights = listOf(1F, 2F, 3F,  3F)
+    val headers = listOf(
+        stringResource(R.string.manager),
+        stringResource(R.string.job_time),
+        stringResource(R.string.job_content),
+        stringResource(R.string.job_description)
+    )
+    val weights = listOf(1F, 2F, 3F, 3F)
     val scrollState = rememberScrollState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .weight(3f)
-            .horizontalScroll(scrollState)
+            .horizontalScroll(scrollState),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         LazyColumn(
             Modifier
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            item {
+            stickyHeader {
                 Row(Modifier.background(MenuBackground)) {
                     for (i in headers.indices) {
                         TableCell(text = headers[i], weight = weights[i])
@@ -364,13 +433,16 @@ fun ColumnScope.ManagerJobList(
             if (dataList.isEmpty()) {
                 item {
                     Row(Modifier.fillMaxWidth()) {
-                        TableCell(text = context.resources.getString(R.string.no_content), weight = 9F)
+                        TableCell(
+                            text = context.resources.getString(R.string.no_content),
+                            weight = 9F
+                        )
                     }
                 }
             }
 
             items(dataList) {
-                val (user_id,work_date,work_type,dscr,result) = it
+                val (user_id, work_date, work_type) = it
 
                 Row(
                     Modifier.fillMaxWidth(),
@@ -379,21 +451,10 @@ fun ColumnScope.ManagerJobList(
                     TableCell(text = user_id, weight = weights[0])
                     TableCell(text = work_date, weight = weights[1])
                     TableCell(text = work_type, weight = weights[2])
-                    TableCell(text = dscr, weight = weights[3])
-                 }
+                    TableCell(text = "", weight = weights[3])
+                }
             }
         }
     }
-
-}
-
-@RequiresApi(Build.VERSION_CODES.O)
-@Preview(
-    showBackground = true,
-    backgroundColor = 0x000000,
-    device = "spec:width=411dp,height=891dp,dpi=420,isRound=false,chinSize=0dp,orientation=landscape"
-)
-@Composable
-fun ManagerJobSearchPreview() {
 
 }

@@ -10,7 +10,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -33,7 +32,7 @@ import androidx.navigation.NavHostController
 import com.pms.admin.*
 import com.pms.admin.R
 import com.pms.admin.domain.util.PMSAndroidViewModelFactory
-import com.pms.admin.model.Mode
+import com.pms.admin.model.data.Mode
 import com.pms.admin.ui.viewModels.MainViewModel
 import com.pms.admin.ui.viewModels.SiteViewModel
 import com.pms.admin.ui.component.common.RegisterItem
@@ -45,28 +44,29 @@ import com.pms.admin.ui.theme.ContentsBackground
 import com.pms.admin.ui.views.managerManagement.FocusItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.reflect.jvm.internal.impl.descriptors.Visibilities.Local
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun SiteAddEdit(
     navController: NavHostController,
     siteId: String,
+    mode: Mode,
     siteViewModel: SiteViewModel = viewModel(
         factory = PMSAndroidViewModelFactory(
             PMSAdminApplication.getInstance()
         )
     ),
+    viewModel: MainViewModel = viewModel(LocalContext.current as ComponentActivity),
 ) {
-    val viewModel: MainViewModel = viewModel(LocalContext.current as ComponentActivity)
+
     val scaffoldState = rememberScaffoldState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    var id by rememberSaveable { mutableStateOf("") }
-    var siteName by rememberSaveable { mutableStateOf("") }
-    var address by rememberSaveable { mutableStateOf("") }
-    var description by rememberSaveable { mutableStateOf("") }
+    var id by remember { mutableStateOf("") }
+    var siteName by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
 
     val keyboardController = LocalSoftwareKeyboardController.current   //중복체크 후 키보드 감추기
 
@@ -74,7 +74,6 @@ fun SiteAddEdit(
     val (idFocus, nameFocus, addressFocus, descFocus) = FocusRequester.createRefs()     //next text focus
 
     val window = rememberWindowSize()
-    val mode: Mode = if (siteId.isEmpty()) Mode.Add else Mode.Edit
 
 
     //site 등록 및 수정 성공,실패 팝업창
@@ -87,7 +86,7 @@ fun SiteAddEdit(
                     scaffoldState.snackbarHostState.showSnackbar(
                         message = String.format(
                             context.resources.getString(
-                                R.string.register_site_success,
+                                R.string.site_success,
                                 result
                             )
                         ),
@@ -103,7 +102,7 @@ fun SiteAddEdit(
                 scaffoldState.snackbarHostState.showSnackbar(
                     String.format(
                         context.resources.getString(
-                            R.string.register_site_fail,
+                            R.string.site_fail,
                             result
                         )
                     )
@@ -112,21 +111,17 @@ fun SiteAddEdit(
         }
     }
 
-    //site가 생성 될 때, siteId, siteName 서버에서 default 받아오기
-    LaunchedEffect(true) {
-        if (mode == Mode.Add) siteViewModel.getSitesId()
-        siteViewModel.siteId.collect { result ->
-            id = result.site_id
-            siteName = "Site_${result.site_id}"
-        }
-    }
 
-    //site 정보 불러오기
-    LaunchedEffect(siteId) {
-        siteViewModel.getSiteInfo(siteId)
+    LaunchedEffect(true) {
+        if (mode == Mode.Add) {//site가 생성 될 때, siteId, siteName 서버에서 default 받아오기
+            siteViewModel.getSitesId()
+            siteViewModel.siteId.collect { result ->
+                id = result.site_id
+                siteName = "Site_${result.site_id}"
+            }
+        } else if (mode == Mode.Edit) siteViewModel.getSiteInfo(siteId)  //site 정보 불러오기
 
         siteViewModel.siteInfo.collect { site ->
-
             id = site.site_id
             siteName = site.site_name
             address = site.site_addr
@@ -145,7 +140,7 @@ fun SiteAddEdit(
                 .background(AdminBackground)
                 .padding(it)
         ) {
-            SidebarMenu(navController, 0)
+            SidebarMenu(navController, 1)
 
             Column(modifier = Modifier.fillMaxSize()) {
                 if (mode == Mode.Add)
@@ -308,11 +303,16 @@ fun SiteAddEdit(
                                                                 R.string.duplicate_site
                                                             ) else context.resources.getString(R.string.available_site)
 
-                                                        scaffoldState.snackbarHostState.showSnackbar(message)
+                                                        scaffoldState.snackbarHostState.showSnackbar(
+                                                            message
+                                                        )
                                                     }
                                                 }
                                             }) {
-                                            Text(text = stringResource(id = R.string.duplicate_check), color = Color.White)
+                                            Text(
+                                                text = stringResource(id = R.string.duplicate_check),
+                                                color = Color.White
+                                            )
                                         }
                                     }
                                 } else {
@@ -332,7 +332,6 @@ fun SiteAddEdit(
                             RegisterItem(
                                 title = stringResource(id = R.string.address),
                                 item = address,
-                                required = false,
                                 focusItem = FocusItem(addressFocus, descFocus),
                                 onTextValueChange = { address = it }
                             )
@@ -343,7 +342,6 @@ fun SiteAddEdit(
                             RegisterItem(
                                 title = stringResource(id = R.string.description),
                                 item = description,
-                                required = false,
                                 focusItem = FocusItem(descFocus, null),
                                 onDone = {
                                     keyboardController?.hide()
@@ -382,8 +380,12 @@ fun SiteAddEdit(
                                             address,
                                             description
                                         )
+
                                     }) {
-                                    Text(text = stringResource(id = R.string.store), color = Color.White)
+                                    Text(
+                                        text = stringResource(id = R.string.store),
+                                        color = Color.White
+                                    )
                                 }
 
                                 Spacer(Modifier.width(10.dp))
@@ -396,9 +398,13 @@ fun SiteAddEdit(
                                     ),
                                     colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red),
                                     onClick = {
+
                                         navController.popBackStack()
                                     }) {
-                                    Text(text =stringResource(id = R.string.cancel), color = Color.White)
+                                    Text(
+                                        text = stringResource(id = R.string.cancel),
+                                        color = Color.White
+                                    )
                                 }
                             }
                         }

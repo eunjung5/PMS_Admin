@@ -11,7 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.pms.admin.model.ManagerListResult
+import com.pms.admin.model.response.*
 import com.pms.admin.ui.theme.MenuBackground
 
 @Composable

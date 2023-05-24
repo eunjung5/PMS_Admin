@@ -129,7 +129,7 @@ fun ColumnScope.Header(
                 Spacer(modifier = Modifier.width(10.dp))
 
                 Text(
-                    "Logout",
+                    "logout",
                     color = Color.White,
                     fontSize = if (window.height == WindowType.Medium) 20.sp else 15.sp,
                     fontWeight = FontWeight.ExtraBold,

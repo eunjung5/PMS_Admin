@@ -9,9 +9,8 @@ import androidx.lifecycle.viewModelScope
 import com.pms.admin.MainActivity
 import com.pms.admin.data.api.ResponseResult
 import com.pms.admin.domain.repository.RemoteRepository
-import com.pms.admin.model.JobListResult
-import com.pms.admin.model.ManagerListResult
-import com.pms.admin.model.UserInfoResult
+import com.pms.admin.model.response.*
+import com.pms.admin.model.response.UserInfoResult
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
@@ -40,9 +39,6 @@ class ManagerViewModel(
     private val _jobList = mutableStateOf<List<JobListResult>>(emptyList())
     val jobList: State<List<JobListResult>> = _jobList
 
-    private val _checkAdminPasswordResult = MutableSharedFlow<Boolean>()
-    val checkAdminPasswordResult: SharedFlow<Boolean> = _checkAdminPasswordResult
-
     private val _updateList = mutableStateOf<Boolean>(false)
     val updateList: State<Boolean> = _updateList
 
@@ -59,7 +55,6 @@ class ManagerViewModel(
 //                }
                 val response: Response<List<ManagerListResult>> =
                     remoteRepository.getManagerList()
-                Log.e(MainActivity.TAG,"getManagerList = ${response.body()}")
                 response.body()?.let { _managerList.value = it }
             } catch (e: Exception) {
                 Log.d(MainActivity.TAG, "Exception : $e")
@@ -81,7 +76,6 @@ class ManagerViewModel(
                 )
 
                 response.body()?.let { response ->
-                    Log.e(MainActivity.TAG, "registerUser = ${response.result}")
                     _registerUserResult.emit(response.result)
                 }
             } catch (e: Exception) {
@@ -185,22 +179,7 @@ class ManagerViewModel(
         }
     }
 
-    //관리자 비밀번호 check
-    fun checkAdminPassword(user_id: String, sha1: String) {
 
-        viewModelScope.launch {
-            try {
-                val response: Response<ResponseResult> =
-                    remoteRepository.checkAdminPassword( user_id, sha1)
-                Log.e(MainActivity.TAG,"checkAdminPassword = ${ response.body()}")
-                response.body()?.let { response ->
-                    _checkAdminPasswordResult.emit(response.result)
-                }
-            } catch (e: Exception) {
-                Log.d(MainActivity.TAG, "Exception : $e")
-            }
-        }
-    }
 
     //사용자 삭제
     fun deleteUser(user_id:String){

@@ -8,10 +8,8 @@ import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
 import com.pms.admin.navigation.MANAGER_GRAPH_ROUTE
 import com.pms.admin.navigation.Screen
-import com.pms.admin.ui.views.managerManagement.ManagerAddEdit
-import com.pms.admin.ui.views.managerManagement.ManagerJobSearch
-import com.pms.admin.ui.views.managerManagement.ManagerManagement
-import com.pms.admin.ui.views.managerManagement.ManagerPasswordEdit
+import com.pms.admin.ui.component.common.CheckAuthorityAndFinish
+import com.pms.admin.ui.views.managerManagement.*
 
 fun NavGraphBuilder.managerNavGraph(
     navController: NavHostController,
@@ -24,6 +22,7 @@ fun NavGraphBuilder.managerNavGraph(
         composable(
             route = Screen.ManagerManagement.route
         ){
+            CheckAuthorityAndFinish()
             ManagerManagement(navController)
         }
 
@@ -31,6 +30,7 @@ fun NavGraphBuilder.managerNavGraph(
         composable(
             route = Screen.ManagerAdd.route
         ){
+            CheckAuthorityAndFinish()
             ManagerAddEdit(navController,"")
         }
 
@@ -44,7 +44,7 @@ fun NavGraphBuilder.managerNavGraph(
             )
         ){  entry ->
             val userId = entry.arguments?.getString("userId") ?: ""
-
+            CheckAuthorityAndFinish()
             ManagerAddEdit(navController, userId)
         }
 
@@ -58,7 +58,7 @@ fun NavGraphBuilder.managerNavGraph(
             )
         ){  entry ->
             val userId = entry.arguments?.getString("userId") ?: ""
-
+            CheckAuthorityAndFinish()
             ManagerPasswordEdit(navController, userId)
         }
 
@@ -72,8 +72,8 @@ fun NavGraphBuilder.managerNavGraph(
             )
         ){  entry ->
             val userId = entry.arguments?.getString("userId") ?: ""
-
-           ManagerJobSearch(navController, userId)
+            CheckAuthorityAndFinish()
+            ManagerJobSearch(navController, userId)
         }
     }
 }

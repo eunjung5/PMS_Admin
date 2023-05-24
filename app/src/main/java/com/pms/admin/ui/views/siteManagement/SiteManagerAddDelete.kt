@@ -1,6 +1,5 @@
 package com.pms.admin.ui.views.siteManagement
 
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -19,7 +18,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.pms.admin.MainActivity.Companion.TAG
 import com.pms.admin.PMSAdminApplication
 import com.pms.admin.R
 import com.pms.admin.WindowType
@@ -39,13 +37,13 @@ import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 
-private data class MPUCheckItem(
-    var id: String,              //mpu id
-    var checked: Boolean = false //mpu checked
+private data class ManagerCheckItem(
+    var id: String,                     //manager id
+    var checked: Boolean = false        //manager checked
 )
 
 @Composable
-fun SiteMPUAddDelete(
+fun SiteManagerAddDelete(
     navController: NavHostController,
     siteId: String,
     siteName: String,
@@ -61,22 +59,23 @@ fun SiteMPUAddDelete(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val window = rememberWindowSize()
-    var mpuList by remember { mutableStateOf<List<SiteMPUListResult>>(emptyList()) }
-    var mpuCheckedList by remember {
-        mutableStateOf<Array<MPUCheckItem>>(emptyArray())
+    var managerList by remember { mutableStateOf<List<SiteManagerListResult>>(emptyList()) }
+    var managerCheckedList by remember {
+        mutableStateOf<Array<ManagerCheckItem>>(emptyArray())
     }
 
     LaunchedEffect(true) {
-        siteViewModel.getMPUList(mode, siteId)
-        siteViewModel.mpuList.collect { list ->
-            mpuList = list
-            mpuCheckedList = Array(list.size) { MPUCheckItem(id = "") }
+        siteViewModel.getManagerList(mode, siteId)
+        siteViewModel.managerList.collect { list ->
+            managerList = list
+            managerCheckedList = Array(list.size) { ManagerCheckItem(id = "") }
 
             list.forEachIndexed { index, item ->
-                mpuCheckedList[index] = MPUCheckItem(id = item.mpuid, checked = false)
+                managerCheckedList[index] = ManagerCheckItem(id = item.user_id, checked = false)
             }
         }
     }
+
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -95,8 +94,8 @@ fun SiteMPUAddDelete(
                 Header(
                     navController,
                     viewModel,
-                    stringResource(id = R.string.mpu_add),
-                    R.drawable.add_circle
+                    stringResource(id = R.string.manager_add),
+                    R.drawable.person_add
                 )
 
                 Column(
@@ -167,12 +166,12 @@ fun SiteMPUAddDelete(
                         ),
                     verticalArrangement = Arrangement.Center
                 ) {
-                    SiteMPUList(dataList = mpuList) {
-                        CheckMPU(it.weight, it.mpuId) { id, checked ->
+                    SiteManagerList(dataList = managerList) {
+                        CheckManager(it.weight, it.userId) { id, checked ->
                             val index =
-                                mpuCheckedList.indexOf(MPUCheckItem(it.mpuId))  //check된 mpu index를 받아옴
-                            mpuCheckedList[index].id = id
-                            mpuCheckedList[index].checked = checked
+                                managerCheckedList.indexOf(ManagerCheckItem(it.userId))  //check된 mpu index를 받아옴
+                            managerCheckedList[index].id = id
+                            managerCheckedList[index].checked = checked
                         }
                     }
                 }
@@ -188,26 +187,23 @@ fun SiteMPUAddDelete(
                 ) {
                     Button(
                         onClick = {
-                            val mpuList = JSONArray()
+                            val managerList = JSONArray()
                             var validChecked = false
 
-                            mpuCheckedList.forEach { it ->
+                            managerCheckedList.forEach { it ->
                                 val jsonObject = JSONObject()
                                 if (it.checked) {
                                     validChecked = true
                                     jsonObject.put("item", it.id)
                                 }
-                                mpuList.put(jsonObject)
+                                managerList.put(jsonObject)
                             }
 
                             scope.launch {
-                                if (!validChecked) {
+                                if(!validChecked){
                                     val job = scope.launch {
                                         scaffoldState.snackbarHostState.showSnackbar(
-                                            message = String.format(
-                                                context.resources.getString(R.string.no_selected_item),
-                                                "MPU"
-                                            ),
+                                            message = String.format(context.resources.getString(R.string.no_selected_item),"관리자"),
                                             duration = SnackbarDuration.Indefinite
                                         )
                                     }
@@ -215,19 +211,23 @@ fun SiteMPUAddDelete(
                                     job.cancel()
                                     return@launch
                                 }
-
-                                siteViewModel.setSitesMPUAddDelete(mode, siteId, siteName, mpuList)
+                                siteViewModel.setSitesManagerAddDelete(
+                                    mode,
+                                    siteId,
+                                    siteName,
+                                    managerList
+                                )
 
                                 siteViewModel.result.collect { response ->
                                     val result = if (mode == Mode.Add) "추가" else "삭제"
                                     val message = if (response) String.format(
                                         context.resources.getString(
-                                            R.string.site_mpu_success
+                                            R.string.site_manager_success
                                         ), result
                                     ) else
                                         String.format(
                                             context.resources.getString(
-                                                R.string.site_mpu_fail
+                                                R.string.site_manager_fail
                                             ), result
                                         )
 
@@ -269,17 +269,17 @@ fun SiteMPUAddDelete(
     }
 }
 
-data class MPUCheckData(val weight: Float, val mpuId: String)
+data class ManagerCheckData(val weight: Float, val userId: String)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ColumnScope.SiteMPUList(
-    dataList: List<SiteMPUListResult>,
-    content: @Composable RowScope.(data: MPUCheckData) -> Unit
+fun ColumnScope.SiteManagerList(
+    dataList: List<SiteManagerListResult>,
+    content: @Composable RowScope.(data: ManagerCheckData) -> Unit
 ) {
 
-    val headers = listOf("MPU ID", "Check")
-    val weights = listOf(4F, 4F)
+    val headers = listOf("관리자 ID", "관리자 이름", "전화번호", "Check")
+    val weights = listOf(2F, 2F, 2F, 2F)
     val scrollState = rememberScrollState()
     val context = LocalContext.current
 
@@ -314,12 +314,17 @@ fun ColumnScope.SiteMPUList(
             }
 
             items(dataList) {
+                val (name, user_id, tel) = it
+
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    TableCell(text = it.mpuid, weight = weights[0])
-                    content(MPUCheckData(weight = weights[1], mpuId = it.mpuid))
+
+                    TableCell(text = name, weight = weights[0])
+                    TableCell(text = user_id, weight = weights[1])
+                    TableCell(text = tel, weight = weights[2])
+                    content(ManagerCheckData(weight = weights[3], userId = user_id))
                 }
             }
         }
@@ -328,7 +333,7 @@ fun ColumnScope.SiteMPUList(
 
 //check icon
 @Composable
-fun RowScope.CheckMPU(
+fun RowScope.CheckManager(
     weight: Float,
     mpuId: String,
     onChecked: (String, Boolean) -> Unit

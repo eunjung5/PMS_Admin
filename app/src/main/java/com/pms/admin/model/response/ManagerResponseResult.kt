@@ -1,4 +1,4 @@
-package com.pms.admin.model
+package com.pms.admin.model.response
 
 import com.google.gson.annotations.SerializedName
 

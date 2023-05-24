@@ -11,7 +11,8 @@ import com.pms.admin.MainActivity.Companion.TAG
 import com.pms.admin.data.api.ResponseResult
 import com.pms.admin.data.api.SessionManagerUtil
 import com.pms.admin.domain.repository.RemoteRepository
-import com.pms.admin.model.*
+import com.pms.admin.model.data.Error
+import com.pms.admin.model.response.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -40,9 +41,14 @@ class MainViewModel(
     private val _logoutResult = MutableSharedFlow<Boolean>()
     val logoutResult: SharedFlow<Boolean> = _logoutResult
 
+    private val _checkAdminPasswordResult = MutableSharedFlow<Boolean>()
+    val checkAdminPasswordResult: SharedFlow<Boolean> = _checkAdminPasswordResult
+
+    private val _changePassword = MutableSharedFlow<Boolean>()
+    val changePassword: SharedFlow<Boolean> = _changePassword
 
     init{
-        Log.e(TAG,"Viewmodel init")
+        checkAuth()
     }
 
     //사용자 로그인
@@ -50,11 +56,11 @@ class MainViewModel(
         viewModelScope.launch {
             try {
                 val userInfo: Response<UserLoginResult> =
-                    remoteRepository.loginUser( userid = id, sha1 = password)
+                    remoteRepository.loginUser(userid = id, sha1 = password)
 
                 if (userInfo.body()?.result == true) {
                     _loginUser.value = userInfo.body()!!
-                    SessionManagerUtil.setUserID(context,id)
+                    SessionManagerUtil.setUserID(context, id)
                     _logInSession.emit(true)
 
                 } else {
@@ -84,9 +90,50 @@ class MainViewModel(
         }
     }
 
+    //관리자 비밀번호 check
+    fun checkAdminPassword(user_id: String, sha1: String) {
 
+        viewModelScope.launch {
+            try {
+                val response: Response<ResponseResult> =
+                    remoteRepository.checkAdminPassword(user_id, sha1)
+                Log.e(MainActivity.TAG, "checkAdminPassword = ${response.body()}")
+                response.body()?.let { response ->
+                    _checkAdminPasswordResult.emit(response.result)
+                }
+            } catch (e: Exception) {
+                Log.d(MainActivity.TAG, "Exception : $e")
+            }
+        }
+    }
 
+    //권한 check
+    fun checkAuth() {
+        viewModelScope.launch {
+            val check = remoteRepository.checkAuthority()
+            check.body()?.let { response ->
+                if (response.result == "false") {
+                    _checkAuth.emit(false)
+                }
+            }
+        }
+    }
 
-    //site 생성시, default site id 받아오기
+    //관리자 비밀번호 변경
+    fun setPasswordChange(userId:String, sha1:String, newSha1:String){
+        viewModelScope.launch {
+            try {
+                val response: Response<ResponseResult> =
+                    remoteRepository.setPasswordChange(userId, sha1,newSha1)
+                Log.e(MainActivity.TAG, "setPasswordChange = ${response.body()}")
+                response.body()?.let { response ->
+                    _changePassword.emit(response.result)
+                    if(response.result) logout()
+                }
+            } catch (e: Exception) {
+                Log.d(MainActivity.TAG, "Exception : $e")
+            }
+        }
+    }
 
 }

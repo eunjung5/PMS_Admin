@@ -127,7 +127,7 @@ fun ManagerPasswordEdit(
                         Modifier
                             .fillMaxSize()
                             .padding(
-                                start = if (window.height == WindowType.Medium) 50.dp else 30.dp,
+                                start = if (window.height == WindowType.Medium) 200.dp else 30.dp,
                                 end = 10.dp,
                                 top = if (window.height == WindowType.Medium) 30.dp else 0.dp
                             ),
@@ -167,6 +167,7 @@ fun ManagerPasswordEdit(
                                                 shape = RoundedCornerShape(5.dp)
                                             ),
                                         readOnly = userId.isNotEmpty(),
+                                        enabled = false,
                                         value = id,
                                         maxLines = 1,
                                         onValueChange = { },
@@ -222,6 +223,7 @@ fun ManagerPasswordEdit(
                                                 shape = RoundedCornerShape(5.dp)
                                             ),
                                         value = name,
+                                        enabled = false,
                                         maxLines = 1,
                                         onValueChange = {},
                                         shape = RoundedCornerShape(5.dp),
@@ -276,6 +278,7 @@ fun ManagerPasswordEdit(
                                                 shape = RoundedCornerShape(5.dp)
                                             ),
                                         value = tel,
+                                        enabled = false,
                                         maxLines = 1,
                                         onValueChange = {},
                                         shape = RoundedCornerShape(5.dp),

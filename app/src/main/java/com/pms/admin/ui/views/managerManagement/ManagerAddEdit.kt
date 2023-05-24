@@ -32,6 +32,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -42,7 +43,7 @@ import com.pms.admin.PMSAdminApplication
 import com.pms.admin.R
 import com.pms.admin.WindowType
 import com.pms.admin.domain.util.PMSAndroidViewModelFactory
-import com.pms.admin.model.Mode
+import com.pms.admin.model.data.Mode
 import com.pms.admin.rememberWindowSize
 import com.pms.admin.ui.viewModels.MainViewModel
 import com.pms.admin.ui.component.common.RegisterItem
@@ -94,8 +95,7 @@ fun ManagerAddEdit(
     //사용자 등록 및 수정 성공,실패 팝업창
     LaunchedEffect(true) {
         managerViewModel.registerUserResult.collect { response ->
-            val result =
-                if (mode == Mode.Add) context.resources.getString(R.string.register) else context.resources.getString(
+            val result = if (mode == Mode.Add) context.resources.getString(R.string.register) else context.resources.getString(
                     R.string.modify
                 )
 
@@ -298,6 +298,13 @@ fun ManagerAddEdit(
 
                                                 //아이디 중복 체크
                                                 scope.launch {
+                                                    if(id.isEmpty()){
+                                                        scaffoldState.snackbarHostState.showSnackbar(
+                                                           context.resources.getString(R.string.no_id_msg)
+                                                        )
+                                                         return@launch
+                                                    }
+
                                                     managerViewModel.checkDuplicatedId.collect { duplicated ->
                                                         val text =
                                                             if (duplicated) String.format(
@@ -426,6 +433,7 @@ fun ManagerAddEdit(
 
                             }
                         }
+
                         if (mode == Mode.Add) {
                             //password text
                             item {
@@ -434,7 +442,9 @@ fun ManagerAddEdit(
                                     item = password,
                                     assistance = "",
                                     required = true,
+                                    password = true,
                                     focusItem = FocusItem(passwordFocus, telFocus),
+                                    inputType = KeyboardType.Password,
                                     onTextValueChange = { password = it }
                                 )
                             }
@@ -447,8 +457,8 @@ fun ManagerAddEdit(
                                 title = stringResource(id = R.string.telephone),
                                 item = tel,
                                 assistance = "",
-                                required = false,
                                 focusItem = FocusItem(telFocus, null),
+                                inputType = KeyboardType.Phone,
                                 onDone = {
                                     keyboardController?.hide()
                                     var message: String = ""
@@ -532,8 +542,7 @@ fun ManagerAddEdit(
                                                     )
                                                 }
                                             } else {
-                                                message =
-                                                    context.resources.getString(R.string.required_msg)
+                                                message = context.resources.getString(R.string.required_msg)
                                             }
 
                                         } else {

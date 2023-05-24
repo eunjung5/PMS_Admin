@@ -1,4 +1,4 @@
-package com.pms.admin.model
+package com.pms.admin.model.data
 
 data class Error(
     var reason: String = "",

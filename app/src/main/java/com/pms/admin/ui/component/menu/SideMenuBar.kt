@@ -35,17 +35,17 @@ data class IconLink(
 @Composable
 fun SidebarMenu(
     navController:NavHostController,
-    selected: Int
+    selected: Int, //menu index
 ) {
     var selectedItem by remember { mutableStateOf(selected) }
     val icons = listOf(
         IconLink(R.drawable.menu_manager, "manager_management"),
         IconLink(R.drawable.menu_site, "site_management"),
-        IconLink(R.drawable.menu_mpu, ""),
-        IconLink(R.drawable.menu_search, ""),
+        IconLink(R.drawable.menu_mpu, "mpu_management"),
+        IconLink(R.drawable.menu_search, "job_history"),
         IconLink(R.drawable.menu_kesco, ""),
         IconLink(R.drawable.menu_message, ""),
-        IconLink(R.drawable.menu_lock, "")
+        IconLink(R.drawable.menu_lock, "change_admin_password")
     )
     val window = rememberWindowSize()
 

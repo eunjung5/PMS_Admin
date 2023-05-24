@@ -80,7 +80,7 @@ fun ColumnScope.MainMenuHeader(viewModel: MainViewModel) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Logout",
+                    "logout",
                     color = Color.White,
                     fontSize = if (window.height == WindowType.Medium) MaterialTheme.typography.h6.fontSize else 15.sp,
                     fontWeight = FontWeight.ExtraBold,
@@ -164,7 +164,7 @@ fun ColumnScope.MainMeuList(
             MainMenuItem(
                 "MPU 관리",
                 painterResource(id = R.drawable.main_mpu),
-                "manager_management"
+                "mpu_management"
             ) { route ->
                 onNavigate(route)
             }
@@ -181,7 +181,7 @@ fun ColumnScope.MainMeuList(
             MainMenuItem(
                 "관리자 작업조회",
                 painterResource(id = R.drawable.main_search),
-                "manager_management"
+                "job_history"
             ) { route ->
                 onNavigate(route)
             }
@@ -205,7 +205,7 @@ fun ColumnScope.MainMeuList(
             MainMenuItem(
                 "Admin PW변경",
                 painterResource(id = R.drawable.main_lock),
-                "manager_management"
+                "change_admin_password"
             ) { route ->
                 onNavigate(route)
             }

@@ -1,4 +1,4 @@
-package com.pms.admin.ui.views.managerManagement
+package com.pms.admin.ui.views.mpuManagement
 
 import android.annotation.SuppressLint
 import android.content.SharedPreferences
@@ -13,7 +13,9 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -29,7 +31,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -40,50 +41,55 @@ import com.pms.admin.domain.util.PMSAndroidViewModelFactory
 import com.pms.admin.model.response.*
 import com.pms.admin.ui.component.common.CustomAlertDialog
 import com.pms.admin.ui.component.common.DeleteDialogEditItem
-import com.pms.admin.ui.viewModels.MainViewModel
+import com.pms.admin.ui.component.common.showSnackBar
 import com.pms.admin.ui.component.menu.Header
 import com.pms.admin.ui.component.menu.SidebarMenu
 import com.pms.admin.ui.component.table.TableCell
-import com.pms.admin.ui.theme.*
+import com.pms.admin.ui.theme.ContentLine
+import com.pms.admin.ui.theme.ContentsBackground
+import com.pms.admin.ui.theme.MenuBackground
+import com.pms.admin.ui.viewModels.MPUViewModel
+import com.pms.admin.ui.viewModels.MainViewModel
 import com.pms.admin.ui.viewModels.ManagerViewModel
 import com.pms.admin.util.computeSHAHash
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-
-@SuppressLint("CoroutineCreationDuringComposition")
 @Composable
-fun ManagerManagement(
+fun MPUManagement(
     navController: NavHostController,
     viewModel: MainViewModel = viewModel(LocalContext.current as ComponentActivity),
-    managerViewModel: ManagerViewModel = viewModel(
+    mpuViewModel: MPUViewModel = viewModel(
         factory = PMSAndroidViewModelFactory(
             PMSAdminApplication.getInstance()
         )
     )
 ) {
-    var managerList = managerViewModel.managerList
     val window = rememberWindowSize()
-    val update = managerViewModel.updateList.value
+    var mpuList by remember{ mutableStateOf(emptyList<MPUListResult>()) }
+    val update = mpuViewModel.updateList.value
 
-    LaunchedEffect(true, update) {
-        managerViewModel.getManagerList()
+    LaunchedEffect(true,update) {
+        mpuViewModel.getMPUList()
+        mpuViewModel.mpuList.collect{
+           mpuList = it
+        }
     }
 
     Row(
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = Modifier.fillMaxSize()
     ) {
-        SidebarMenu(navController, 0)
+        SidebarMenu(navController, 2)
 
         Column(modifier = Modifier.fillMaxSize()) {
             Header(
                 navController,
                 viewModel,
-                stringResource(id = R.string.manager_management),
-                R.drawable.menu_manager
+                stringResource(id = R.string.mpu_management),
+                R.drawable.menu_mpu
             )
 
-            //manager create button
+            //mpu create button
             Column(
                 modifier = Modifier
                     .weight(0.5f)
@@ -97,18 +103,17 @@ fun ManagerManagement(
                     horizontalArrangement = Arrangement.End,
                 ) {
                     Button(
-                        onClick = { navController.navigate("manager_add") },
+                        onClick = { navController.navigate("mpu_add") },
                         colors = ButtonDefaults.buttonColors(backgroundColor = MenuBackground),
                         shape = RoundedCornerShape(50.dp)
                     ) {
                         Text(
-                            text = stringResource(id = R.string.manager_create),
-                            color = Color.White
+                            text = stringResource(id = R.string.mpu_add), color = Color.White
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Icon(
                             imageVector = Icons.Outlined.Add,
-                            contentDescription = "manager_create",
+                            contentDescription = "site_create",
                             tint = Color.White
                         )
                     }
@@ -120,10 +125,10 @@ fun ManagerManagement(
                     .fillMaxSize()
                     .weight(if (window.height == WindowType.Medium) 5f else 3f)
             ) {
-                ManagerManagementList(
-                    dataList = managerList.value,
+                MPUManagementList(
+                    dataList = mpuList,
                 ) {
-                    EditMode(managerViewModel, it.weight, it.userId) { url ->
+                    EditMode(mpuViewModel, it.weight, it.mpuId) { url ->
                         navController.navigate(url)
                     }
                 }
@@ -131,21 +136,21 @@ fun ManagerManagement(
         }
 
     }
-
 }
 
-data class EditModeData(val weight: Float, val userId: String)
+data class EditModeData(val weight: Float, val mpuId: Int)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ColumnScope.ManagerManagementList(
-    dataList: List<ManagerListResult>,
+fun ColumnScope.MPUManagementList(
+    dataList: List<MPUListResult>,
     content: @Composable RowScope.(data: EditModeData) -> Unit
 ) {
 
-    val headers = listOf("ID", "이름", "레벨", "전화번호", "사이트", "작업")
-    val weights = listOf(1.5F, 1F, 1.5F, 1.5F, 2F, 2F)
+    val headers = listOf("MPU ID", "사이트", "구성", "작업")
+    val weights = listOf(1F, 1.5F, 5F, 1F)
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -159,7 +164,6 @@ fun ColumnScope.ManagerManagementList(
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-
             stickyHeader {
                 Row(Modifier.background(MenuBackground)) {
                     for (i in headers.indices) {
@@ -172,25 +176,33 @@ fun ColumnScope.ManagerManagementList(
             if (dataList.isEmpty()) {
                 item {
                     Row(Modifier.fillMaxWidth()) {
-                        TableCell(text = stringResource(id = R.string.no_content), weight = 9.5F)
+                        TableCell(
+                            text = context.resources.getString(R.string.no_content),
+                            weight = 8.5F
+                        )
                     }
                 }
             }
 
             items(dataList) {
-                val (descr, name, role, sites, tel, user_id) = it
-                val site = sites.joinToString()
+                val (mpu_id, site_name, composition) = it
+                val compositionList = composition.joinToString(','.toString())
+
 
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    TableCell(text = user_id, weight = weights[0])
-                    TableCell(text = name, weight = weights[1])
-                    TableCell(text = role, weight = weights[2])
-                    TableCell(text = tel, weight = weights[3])
-                    TableCell(text = site, weight = weights[4])
-                    content(EditModeData(weight = weights[5], userId = user_id))
+                    TableCell(text = mpu_id.toString(), weight = weights[0])
+                    TableCell(text = site_name, weight = weights[1])
+                    TableCell(text = compositionList, weight = weights[2])
+
+                    content(
+                        EditModeData(
+                            weight = weights[3],
+                            mpuId = mpu_id,
+                        )
+                    )
                 }
             }
         }
@@ -200,18 +212,17 @@ fun ColumnScope.ManagerManagementList(
 //작업 아이콘들
 @Composable
 fun RowScope.EditMode(
-    viewModel: ManagerViewModel,
+    viewModel: MPUViewModel,
     weight: Float,
-    userId: String,
+    mpuId: Int,
     onNavigator: (String) -> Unit
 ) {
     var deleteDialog by remember { mutableStateOf(false) }
     val window = rememberWindowSize()
     val width = weight * 100
-
     return Row(
         modifier = Modifier
-            // .weight(weight)
+            //.weight(weight)
             .width(width.dp)
             .height(50.dp)
             .fillMaxWidth()
@@ -220,87 +231,61 @@ fun RowScope.EditMode(
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
 
-        Icon(
-            imageVector = Icons.Outlined.Edit,
-            contentDescription = "user edit",
+        Icon(imageVector = Icons.Outlined.Edit,
+            contentDescription = "mpu_edit",
             tint = Color.White,
             modifier = Modifier
                 .width(20.dp)
                 .clickable {
-                    onNavigator("manager_edit/$userId")
-                }
-        )
+                    onNavigator("mpu_edit/$mpuId")
+                })
 
-        Spacer(modifier = Modifier.width(5.dp))
-        Icon(
-            imageVector = Icons.Outlined.Refresh,
-            contentDescription = "user password reset",
-            tint = Color.White,
-            modifier = Modifier
-                .width(20.dp)
-                .clickable {
-                    onNavigator("manager_password_edit/$userId")
-                }
-        )
 
-        Spacer(modifier = Modifier.width(5.dp))
-        Icon(
-            imageVector = Icons.Outlined.Search,
-            contentDescription = "user search",
-            tint = Color.White,
-            modifier = Modifier
-                .width(20.dp)
-                .clickable {
-                    Log.e(TAG,"manager_job_search = $userId")
-                    onNavigator("manager_job_search/$userId")
-                }
-        )
-
-        Spacer(modifier = Modifier.width(5.dp))
-        Icon(
-            imageVector = Icons.Outlined.Delete,
-            contentDescription = "user delete",
+      //  Spacer(modifier = Modifier.width(5.dp))
+        Icon(imageVector = Icons.Outlined.Delete,
+            contentDescription = "mpu_delete",
             tint = Color.Red,
             modifier = Modifier
                 .width(20.dp)
                 .clickable {
                     deleteDialog = true
-                }
-        )
+                })
+
 
         if (deleteDialog) {
             viewModel.setListUpdate(false)
+
             CustomAlertDialog(onDismissRequest = { deleteDialog = false }) {
                 Column(
                     modifier = Modifier
                         .width(if (window.height == WindowType.Medium) 600.dp else 800.dp)
-                        .height(550.dp)
+                        .height(480.dp)
                         .background(Color.LightGray)
                 ) {
-                    DeleteUser(
-                        userId = userId,
-                        managerViewModel = viewModel,
-                        onDismissRequest = { deleteDialog = false}
+                    DeleteMPU(
+                        mpuId = mpuId.toString(),
+                        mpuViewModel = viewModel,
+                        onDismissRequest = { deleteDialog = false }
                     )
                 }
+
             }
         }
+
     }
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
-fun DeleteUser(
-    userId: String,
-    managerViewModel: ManagerViewModel,
-    viewModel: MainViewModel = viewModel(factory = PMSAndroidViewModelFactory( PMSAdminApplication.getInstance())),
+fun DeleteMPU(
+    mpuId: String,
+    mpuViewModel: MPUViewModel,
+    viewModel: MainViewModel = viewModel(factory = PMSAndroidViewModelFactory(PMSAdminApplication.getInstance())),
     onDismissRequest: () -> Unit,
 ) {
 
     var password by remember { mutableStateOf("") }
-    var id by remember { mutableStateOf("") }
-    var name by remember { mutableStateOf("") }
 
     val scaffoldState = rememberScaffoldState()
     val scope = rememberCoroutineScope()
@@ -312,34 +297,32 @@ fun DeleteUser(
 
     val scrollState = rememberScrollState()  // mobile vertical scroll
 
-    LaunchedEffect(userId) {
-        managerViewModel.getUserInfo(userId)
-        managerViewModel.userInfo.collect { user ->
-            id = user.user_id
-            name = user.name
-        }
-    }
-
     LaunchedEffect(true) {
         viewModel.checkAdminPasswordResult.collect { result ->
             if (!result) {
-                scaffoldState.snackbarHostState.showSnackbar(context.resources.getString(R.string.not_match_admin_password))
+                showSnackBar(
+                    scaffoldState = scaffoldState,
+                    message = context.resources.getString(R.string.not_match_admin_password)
+                )
             } else {
-                managerViewModel.deleteUser(userId)
+                mpuViewModel.deleteMPU(mpuId)
             }
         }
     }
 
     LaunchedEffect(true) {
-        managerViewModel.result.collect { result ->
+        mpuViewModel.result.collect { result ->
+            Log.e(TAG,"mpuViewModel result = $result")
             val message = if (result) String.format(
-                context.resources.getString(R.string.delete_user_message),
+                context.resources.getString(R.string.delete_mpu_message),
                 "성공"
-            ) else String.format(context.resources.getString(R.string.delete_user_message), "실패")
-            scaffoldState.snackbarHostState.showSnackbar(message)
+            ) else String.format(context.resources.getString(R.string.delete_mpu_message), "실패")
+            showSnackBar(scaffoldState = scaffoldState, message = message)
+            //scaffoldState.snackbarHostState.showSnackbar(message)
+
             onDismissRequest()
 
-            if (result) managerViewModel.setListUpdate(true)
+            if (result) mpuViewModel.setListUpdate(true)
         }
     }
 
@@ -382,7 +365,7 @@ fun DeleteUser(
                             fontSize = MaterialTheme.typography.body1.fontSize,
                         )
                     ) {
-                        append("해당 관리자를 ")
+                        append("해당 MPU를 ")
                     }
 
                     withStyle(
@@ -405,14 +388,15 @@ fun DeleteUser(
                 })
                 Spacer(Modifier.height(5.dp))
                 Text(
-                    text = stringResource(id = R.string.warning_user_delete_message),
+                    text = stringResource(id = R.string.warning_mpu_delete_message),
                     color = Color.White,
                     fontSize = MaterialTheme.typography.body1.fontSize,
                 )
 
-                DeleteDialogEditItem(title = stringResource(id = R.string.id), content =id )
-                DeleteDialogEditItem(title = stringResource(id = R.string.name), content = name)
-
+                DeleteDialogEditItem(
+                    title = stringResource(id = R.string.delete_mpu),
+                    content = mpuId
+                )
 
                 Row(
                     modifier = Modifier
@@ -464,12 +448,14 @@ fun DeleteUser(
                                         adminID,
                                         computeSHAHash(password)
                                     )
-                                else
-                                    scaffoldState.snackbarHostState.showSnackbar(
-                                        context.resources.getString(
+                                else {
+                                    showSnackBar(
+                                        scaffoldState = scaffoldState,
+                                        message = context.resources.getString(
                                             R.string.want_to_input_admin_password
                                         )
                                     )
+                                }
                             }
                         }
                         ),
@@ -499,18 +485,19 @@ fun DeleteUser(
                         onClick = {
                             scope.launch {
                                 keyboardController?.hide()
-
                                 if (password.isNotEmpty())
                                     viewModel.checkAdminPassword(
                                         adminID,
                                         computeSHAHash(password)
                                     )
-                                else
-                                    scaffoldState.snackbarHostState.showSnackbar(
-                                        context.resources.getString(
+                                else {
+                                    showSnackBar(
+                                        scaffoldState = scaffoldState,
+                                        message =  context.resources.getString(
                                             R.string.want_to_input_admin_password
                                         )
                                     )
+                                }
                             }
                         },
                         colors = ButtonDefaults.buttonColors(
@@ -535,16 +522,4 @@ fun DeleteUser(
             }
         }
     }
-}
-
-
-
-@Preview(
-    showBackground = true,
-    backgroundColor = 0x000000,
-    device = "spec:width=600dp,height=500dp,dpi=420,isRound=false,chinSize=0dp,orientation=landscape"
-)
-@Composable
-fun DefaultPreviewSidebarMenu() {
-
 }
